@@ -1,0 +1,111 @@
+# ==========================================
+# 🔹 General
+# ==========================================
+.DS_Store
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.env
+.env.*
+*.log
+*.pid
+*.seed
+*.tmp
+tmp/
+temp/
+dist/
+build/
+coverage/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ==========================================
+# 🔹 OS / Editor
+# ==========================================
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+*.iml
+*.class
+
+# ==========================================
+# 🔹 Frontend (Next.js)
+# ==========================================
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/.vercel/
+frontend/.eslintcache
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.production.local
+frontend/.env.test.local
+
+# ==========================================
+# 🔹 Backend (NestJS)
+# ==========================================
+backend-nest/node_modules/
+backend-nest/dist/
+backend-nest/.env
+backend-nest/.env.*
+backend-nest/.DS_Store
+backend-nest/prisma/dev.db
+backend-nest/prisma/migrations/
+
+# ==========================================
+# 🔹 Backend (Spring Boot)
+# ==========================================
+backend-spring/.idea/
+backend-spring/.gradle/
+backend-spring/build/
+backend-spring/out/
+backend-spring/.settings/
+backend-spring/.classpath
+backend-spring/.project
+backend-spring/target/
+backend-spring/.env
+backend-spring/application.properties
+backend-spring/application.yml
+backend-spring/application-local.yml
+
+# ==========================================
+# 🔹 Docker / Infrastructure
+# ==========================================
+infra/.env
+infra/nginx/conf.d/*.log
+infra/logs/
+docker-compose.override.yml
+*.bak
+*.old
+
+# ==========================================
+# 🔹 Database / Prisma
+# ==========================================
+*.sqlite
+*.db
+prisma/dev.db
+prisma/migrations/
+prisma/.env
+
+# ==========================================
+# 🔹 OS Cache / Temporary
+# ==========================================
+*.lock
+*.lockfile
+__pycache__/
+*.pyc
+.cache/
+logs/
+*.log
+
+# ==========================================
+# 🔹 Git / CI
+# ==========================================
+.gitlab/
+.github/workflows/*.tmp
+*.coverage
+coverage-final.json
