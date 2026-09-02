@@ -9,6 +9,8 @@ yarn-error.log*
 pnpm-debug.log*
 .env
 .env.*
+!.env.example
+!**/.env.example
 *.log
 *.pid
 *.seed
@@ -48,13 +50,13 @@ frontend/.env.test.local
 # ==========================================
 # 🔹 Backend (NestJS)
 # ==========================================
-backend-nest/node_modules/
-backend-nest/dist/
-backend-nest/.env
-backend-nest/.env.*
-backend-nest/.DS_Store
-backend-nest/prisma/dev.db
-backend-nest/prisma/migrations/
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/.DS_Store
+backend/prisma/dev.db
 
 # ==========================================
 # 🔹 Backend (Spring Boot)
@@ -88,7 +90,6 @@ docker-compose.override.yml
 *.sqlite
 *.db
 prisma/dev.db
-prisma/migrations/
 prisma/.env
 
 # ==========================================

@@ -1,15 +1,23 @@
 {
-	"scripts": {
-		"prepare": "husky"
-	},
-	"devDependencies": {
-		"husky": "^9.1.7",
-		"lint-staged": "^16.2.4"
-	},
-	"lint-staged": {
-		"frontend/**/*.{js,jsx,ts,tsx}": [
-			"cd frontend && pnpm eslint --fix"
-		]
-	},
-	"packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad"
+  "name": "reelink",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter @reelink/frontend --filter @reelink/backend dev",
+    "build": "pnpm --recursive --if-present build",
+    "lint": "pnpm --recursive --if-present lint",
+    "test": "pnpm --recursive --if-present test",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.4"
+  },
+  "lint-staged": {
+    "frontend/**/*.{js,jsx,ts,tsx}": "pnpm --dir frontend exec eslint --fix"
+  },
+  "engines": {
+    "node": ">=24.20.0 <25",
+    "pnpm": "11.25.0"
+  },
+  "packageManager": "pnpm@11.25.0"
 }
