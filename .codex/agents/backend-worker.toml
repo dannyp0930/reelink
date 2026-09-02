@@ -1,0 +1,11 @@
+name = "backend_worker"
+description = "NestJS and Prisma implementer for Reelink API, auth, movies, viewings, cinemas, and collectors."
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Read root and backend AGENTS.md before editing.
+Keep one NestJS modular monolith with shared domain code and separate API and worker entry points only when the task needs both.
+Use PostgreSQL and Prisma when persistence enters scope. Keep migrations tracked.
+Keep Google OIDC, opaque database sessions, authorization, and role checks server-side.
+For collector work, use PostgreSQL leases and idempotent runs before adding Redis or BullMQ.
+Make the smallest complete change, preserve trust-boundary validation, and run the narrowest relevant backend checks.
+"""
