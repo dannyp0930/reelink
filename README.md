@@ -167,6 +167,7 @@ Backend 환경 변수 예시는 [`backend/.env.example`](backend/.env.example)�
 ## 문서
 
 - [현재 작업 현황과 다음 작업](docs/project-status.md)
+- [CGV 굿즈 source 사전 검증](docs/source-feasibility/cgv.md)
 - [Frontend 안내](frontend/README.md)
 - [Backend 안내](backend/README.md)
 - [Codex 하네스](docs/codex-harness.md)
