@@ -27,7 +27,7 @@ Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하�
 
 ## 현재 상태
 
-2026-09-02 기준 실제 저장소 상태다.
+2026-09-03 기준 실제 저장소 상태다.
 
 | 영역 | 현재 상태 |
 | --- | --- |
@@ -35,7 +35,7 @@ Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하�
 | Runtime | Node.js `24.20.0`, pnpm `11.25.0` 고정 |
 | Frontend | Next.js `16.3.4`, React `19.2.8`, Tailwind CSS 4 |
 | Frontend UI | `create-next-app` 기본 화면. 제품 UI 미구현 |
-| Backend | NestJS 11 Hello World API. NestJS 12 업그레이드 예정 |
+| Backend | NestJS `12.0.1`, TypeScript `6.0.3` Hello World API |
 | Database | 미구현. PostgreSQL + Prisma 도입 예정 |
 | Auth | 미구현. Google OAuth 단일 provider부터 검토 |
 | Worker | 미구현. 첫 굿즈 source 검증 후 추가 |
@@ -129,7 +129,7 @@ Backend 환경 변수 예시는 [`backend/.env.example`](backend/.env.example)�
 
 - 완료: pnpm workspace, 단일 lockfile, Node/pnpm 고정
 - 완료: Next.js 16 + React 19.2 업그레이드
-- 다음: NestJS 12 compatibility 검증과 업그레이드
+- 완료: NestJS 12 compatibility 검증과 업그레이드
 
 ### Phase 2 — Auth + Movie + MovieViewing
 
@@ -166,6 +166,7 @@ Backend 환경 변수 예시는 [`backend/.env.example`](backend/.env.example)�
 
 ## 문서
 
+- [현재 작업 현황과 다음 작업](docs/project-status.md)
 - [Frontend 안내](frontend/README.md)
 - [Backend 안내](backend/README.md)
 - [Codex 하네스](docs/codex-harness.md)

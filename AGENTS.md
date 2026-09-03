@@ -25,6 +25,7 @@
 - For user-facing frontend changes, start the app and complete the `web-design-guidelines` and `playwright-cli` checks before closeout.
 - After backend changes, run the narrowest relevant test, then `pnpm --dir backend lint`, `pnpm --dir backend test`, and `pnpm --dir backend build` when applicable.
 - Do not commit, push, publish, deploy, or mutate external services unless the user explicitly asks.
+- Before switching PCs or ending substantial work, update `docs/project-status.md` with the current phase, completed work, next action, blockers, and commands verified in that session.
 
 ## Documentation
 

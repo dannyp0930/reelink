@@ -20,6 +20,7 @@ temp/
 dist/
 build/
 coverage/
+*.tsbuildinfo
 .idea/
 .vscode/
 *.swp

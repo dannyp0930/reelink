@@ -4,14 +4,12 @@ Reelink의 API와 도메인 규칙을 담당하는 NestJS 앱이다. 목표 구�
 
 ## 현재 상태
 
-- NestJS 11
-- TypeScript 5
+- NestJS `12.0.1`
+- TypeScript `6.0.3`
 - Jest 30
 - `GET /` Hello World API만 구현됨
 - DB, Prisma, Auth, MovieViewing, Cinema, Goods domain 미구현
 - 기본 port `3001`
-
-NestJS 12 업그레이드는 도메인 구현과 섞지 않고 별도 작업으로 진행한다.
 
 ## 환경 변수
 
@@ -42,12 +40,11 @@ pnpm --dir backend build
 
 ## 구현 순서
 
-1. NestJS 12 compatibility 검증과 업그레이드
-2. PostgreSQL + Prisma와 첫 migration
-3. Google OAuth와 `USER`/`ADMIN` 권한
-4. Movie, MovieExternalId, MovieViewing
-5. Cinema, CinemaSource와 `/admin` API
-6. GoodsCampaign, GoodsItem, GoodsAvailability, AvailabilityObservation
-7. GoodsCandidate 승인과 CollectorRun 운영 API
+1. PostgreSQL + Prisma와 첫 migration
+2. Google OAuth와 `USER`/`ADMIN` 권한
+3. Movie, MovieExternalId, MovieViewing
+4. Cinema, CinemaSource와 `/admin` API
+5. GoodsCampaign, GoodsItem, GoodsAvailability, AvailabilityObservation
+6. GoodsCandidate 승인과 CollectorRun 운영 API
 
 전체 방향과 구현 순서는 [루트 README](../README.md)를 따른다.
