@@ -168,6 +168,12 @@ Backend 환경 변수 예시는 [`backend/.env.example`](backend/.env.example)�
 
 - [현재 작업 현황과 다음 작업](docs/project-status.md)
 - [CGV 굿즈 source 사전 검증](docs/source-feasibility/cgv.md)
+- [롯데시네마 굿즈 source 사전 검증](docs/source-feasibility/lotte-cinema.md)
+- [메가박스 굿즈 source 사전 검증](docs/source-feasibility/megabox.md)
+- [씨네Q 굿즈 source 사전 검증](docs/source-feasibility/cineq.md)
+- [Instagram 굿즈 source 사전 검증](docs/source-feasibility/instagram.md)
+- [독립영화관 굿즈 source 사전 검증](docs/source-feasibility/independent-cinemas.md)
+- [굿즈 source 비교와 Phase 0 판단](docs/source-feasibility/comparison.md)
 - [Frontend 안내](frontend/README.md)
 - [Backend 안내](backend/README.md)
 - [Codex 하네스](docs/codex-harness.md)
