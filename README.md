@@ -2,7 +2,7 @@
 
 Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하는 서비스다.
 
-현재 로컬 PostgreSQL 연결과 첫 migration, 관람·평점 데이터 모델까지 구현했다. 화면은 아직 `create-next-app` 기본 상태이며 로그인과 관람 기록 입력 UI, 굿즈 운영 기능은 미구현이다.
+현재 로컬 PostgreSQL 연결, 관람·평점 데이터 모델, Google 로그인·세션·권한 코드와 로그인 화면까지 구현했다. 실제 Google 계정 로그인은 OAuth 설정 후 검증해야 한다. 관람 기록 입력 UI와 굿즈 운영 기능은 미구현이다.
 
 ## 제품 범위
 
@@ -36,10 +36,10 @@ Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하�
 | Repository | pnpm workspace와 루트 단일 lockfile 구성 완료 |
 | Runtime | Node.js `24.20.0`, pnpm `11.25.0` 고정 |
 | Frontend | Next.js `16.3.4`, React `19.2.8`, Tailwind CSS 4 |
-| Frontend UI | `create-next-app` 기본 화면. 제품 UI 미구현 |
-| Backend | NestJS `12.0.1`, TypeScript `6.0.3` Hello World API |
-| Database | 로컬 PostgreSQL 17 + Prisma `7.10.0`, 첫 migration과 DB 테스트 완료 |
-| Auth | 미구현. Google OAuth 단일 provider부터 검토 |
+| Frontend UI | 로그인·로그아웃 화면, 오류·재시도·모바일 상태 구현 |
+| Backend | NestJS `12.0.1`, TypeScript `6.0.3`, 인증·본인 관람 목록·상세 API |
+| Database | 로컬 PostgreSQL 17 + Prisma `7.10.0`, 도메인·세션 migration 적용 |
+| Auth | Google OIDC·DB 세션·권한 구현. 실제 Google 로그인 검증 대기 |
 | Worker | 미구현. 첫 굿즈 source 검증 후 추가 |
 | Infra | 로컬 DB용 Docker Compose 추가. CI/CD와 배포 환경 미구현 |
 
@@ -99,6 +99,8 @@ pnpm dev
 
 Backend 환경 변수 예시는 [`backend/.env.example`](backend/.env.example)에 있다. 로컬 비밀 값은 `.env`에 두고 Git에 올리지 않는다.
 
+Google OAuth 설정과 별도 테스트 DB 준비는 [로그인 설정 가이드](docs/auth-setup.md)를 따른다. 자격 증명이 없으면 앱은 실행되지만 로그인 버튼은 비활성화된다.
+
 Compose의 계정은 로컬 개발 전용이며 DB 포트는 `127.0.0.1:5432`에만 노출한다. 운영 환경에는 이 계정을 사용하지 않는다. DB는 named volume에 남는다. 다른 PC에서는 코드를 받은 뒤 migration을 적용하며, 개인 관람 데이터는 Git으로 동기화되지 않는다.
 
 ## 주요 명령
@@ -149,8 +151,8 @@ Compose의 계정은 로컬 개발 전용이며 DB 포트는 `127.0.0.1:5432`에
 ### Phase 2 — Auth + Movie + MovieViewing
 
 - 완료: PostgreSQL + Prisma 연결, 첫 migration, 영화·외부 ID·관람 회차·평점 모델과 DB 검증.
-- 다음: Google OAuth, 세션, `USER`/`ADMIN`, 내 기록 접근 제한.
-- 이후: 영화 검색과 관람 기록 CRUD, 5점 만점·0.5점 단위 평점 입력.
+- 완료: Google OIDC·DB 세션·`USER`/`ADMIN` 권한 검사와 내 기록 조회 제한. Google 자격 증명 설정 후 실제 로그인 검증은 남아 있다.
+- 다음: 실제 Google 로그인 확인, 영화 검색과 관람 기록 CRUD, 5점 만점·0.5점 단위 평점 입력.
 - 관람 목록에서 평점별 모아보기, 높은순·낮은순 정렬, 미평가 필터를 구현한다.
 
 2026-09-07 실행 우선순위는 DB → 로그인 → 관람 기록·평점 → 평점별 정리 → 캘린더 → 수동 굿즈 MVP → 개인 배포다. 모든 단계는 Astra `high`로 진행한다. 아래 자동 수집·알림 단계는 실제 수요와 source 검증 결과에 따라 선택한다. 최신 완료·대기 상태는 `docs/project-status.md`를 따른다.

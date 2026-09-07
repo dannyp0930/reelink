@@ -39,4 +39,5 @@
 
 - `MovieExternalId`, `MovieViewing`, 평점 반점 단위를 추가했다. 기존 `Movie.tmdbId`는 외부 ID 모델로 옮겼다. 이전 초안은 DB에 적용되지 않아 데이터 이관은 없었다.
 - 빈 `reelink_test` DB에 migration을 재적용하고 DB 테스트를 실행했다. 테스트 데이터는 각 트랜잭션 종료 시 롤백한다.
-- 승인 중복·트랜잭션, 만료·상충 조회 API, OAuth session은 아직 미구현이다. 이번 검증은 해당 기능의 완성을 뜻하지 않는다.
+- 승인 중복·트랜잭션, 만료·상충 조회 API는 아직 미구현이다. 이번 검증은 해당 기능의 완성을 뜻하지 않는다.
+- 2026-09-07 후속 인증 작업에서 `Session`, `OAuthLogin`, `User.googleSubject`를 추가하고 두 번째 migration을 적용했다. 기존 relation/index와 함께 검증했다. 실제 Google 로그인은 자격 증명 설정 후 확인해야 한다. 설정 방법은 `docs/auth-setup.md`에 있다.

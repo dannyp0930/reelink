@@ -104,6 +104,7 @@ __pycache__/
 logs/
 *.log
 _workspace/
+.playwright-cli/
 
 # ==========================================
 # 🔹 Git / CI

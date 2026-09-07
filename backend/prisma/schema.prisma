@@ -71,13 +71,37 @@ enum CandidateReviewStatus {
 model User {
   id                   String             @id @default(uuid()) @db.Uuid
   email                String             @unique
+  googleSubject        String?            @unique
   role                 UserRole           @default(USER)
+  sessions             Session[]
   viewings             MovieViewing[]
   reportedObservations GoodsObservation[] @relation("ObservationReporter")
   submittedCandidates  GoodsCandidate[]   @relation("CandidateSubmitter")
   reviewedCandidates   GoodsCandidate[]   @relation("CandidateReviewer")
   createdAt            DateTime           @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime           @updatedAt @db.Timestamptz(3)
+}
+
+model Session {
+  tokenHash String   @id @db.Char(64)
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model OAuthLogin {
+  stateHash   String   @id @db.Char(64)
+  bindingHash String   @db.Char(64)
+  nonce       String
+  verifier    String
+  expiresAt   DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@index([bindingHash])
 }
 
 model Movie {
