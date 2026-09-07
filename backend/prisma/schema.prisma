@@ -1,5 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -9,6 +11,11 @@ datasource db {
 enum UserRole {
   USER
   ADMIN
+}
+
+enum MovieSource {
+  TMDB
+  KOBIS
 }
 
 enum CinemaChain {
@@ -62,93 +69,130 @@ enum CandidateReviewStatus {
 }
 
 model User {
-  id                String            @id @default(uuid()) @db.Uuid
-  email             String            @unique
-  role              UserRole          @default(USER)
+  id                   String             @id @default(uuid()) @db.Uuid
+  email                String             @unique
+  role                 UserRole           @default(USER)
+  viewings             MovieViewing[]
   reportedObservations GoodsObservation[] @relation("ObservationReporter")
-  submittedCandidates  GoodsCandidate[]    @relation("CandidateSubmitter")
-  reviewedCandidates   GoodsCandidate[]    @relation("CandidateReviewer")
-  createdAt         DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
+  submittedCandidates  GoodsCandidate[]   @relation("CandidateSubmitter")
+  reviewedCandidates   GoodsCandidate[]   @relation("CandidateReviewer")
+  createdAt            DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime           @updatedAt @db.Timestamptz(3)
 }
 
 model Movie {
-  id            String           @id @default(uuid()) @db.Uuid
+  id            String            @id @default(uuid()) @db.Uuid
   title         String
   originalTitle String?
-  releaseDate   DateTime?        @db.Date
-  tmdbId        String?          @unique
+  releaseDate   DateTime?         @db.Date
+  externalIds   MovieExternalId[]
+  viewings      MovieViewing[]
   campaigns     GoodsCampaign[]
-  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime         @updatedAt @db.Timestamptz(3)
+  createdAt     DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime          @updatedAt @db.Timestamptz(3)
+}
+
+model MovieExternalId {
+  id         String      @id @default(uuid()) @db.Uuid
+  movieId    String      @db.Uuid
+  source     MovieSource
+  externalId String
+  movie      Movie       @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([source, externalId])
+  @@unique([movieId, source])
+}
+
+model MovieViewing {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  movieId         String   @db.Uuid
+  watchedOn       DateTime @db.Date
+  cinemaId        String?  @db.Uuid
+  auditorium      String?
+  /// Half-star units: 0..10 represent 0..5 stars; null means unrated.
+  ratingHalfStars Int?     @db.SmallInt
+  note            String?
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie           Movie    @relation(fields: [movieId], references: [id], onDelete: Restrict)
+  cinema          Cinema?  @relation(fields: [cinemaId], references: [id], onDelete: Restrict)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([userId, watchedOn])
+  @@index([userId, ratingHalfStars])
+  @@index([movieId])
+  @@index([cinemaId])
 }
 
 model Cinema {
-  id            String             @id @default(uuid()) @db.Uuid
-  name          String
-  chain         CinemaChain
-  status        CinemaStatus       @default(ACTIVE)
-  address       String?
-  observations  GoodsObservation[]
-  candidates    GoodsCandidate[]
-  createdAt     DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime           @updatedAt @db.Timestamptz(3)
+  id           String             @id @default(uuid()) @db.Uuid
+  name         String
+  chain        CinemaChain
+  status       CinemaStatus       @default(ACTIVE)
+  address      String?
+  viewings     MovieViewing[]
+  observations GoodsObservation[]
+  candidates   GoodsCandidate[]
+  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(3)
 
   @@unique([chain, name])
 }
 
 model GoodsCampaign {
-  id            String             @id @default(uuid()) @db.Uuid
-  movieId       String             @db.Uuid
-  title         String
-  startsAt      DateTime?          @db.Timestamptz(3)
-  endsAt        DateTime?          @db.Timestamptz(3)
-  sourceType    SourceType
-  sourceUrl     String
-  status        CampaignStatus     @default(DRAFT)
-  movie         Movie              @relation(fields: [movieId], references: [id])
-  items         GoodsItem[]
-  observations  GoodsObservation[]
-  candidates    GoodsCandidate[]
-  createdAt     DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime           @updatedAt @db.Timestamptz(3)
+  id           String             @id @default(uuid()) @db.Uuid
+  movieId      String             @db.Uuid
+  title        String
+  startsAt     DateTime?          @db.Timestamptz(3)
+  endsAt       DateTime?          @db.Timestamptz(3)
+  sourceType   SourceType
+  sourceUrl    String
+  status       CampaignStatus     @default(DRAFT)
+  movie        Movie              @relation(fields: [movieId], references: [id])
+  items        GoodsItem[]
+  observations GoodsObservation[]
+  candidates   GoodsCandidate[]
+  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(3)
 
   @@index([movieId, status])
 }
 
 model GoodsItem {
-  id            String             @id @default(uuid()) @db.Uuid
-  campaignId    String             @db.Uuid
-  name          String
-  kind          GoodsItemKind
-  note          String?
-  sortOrder     Int                @default(0)
-  campaign      GoodsCampaign      @relation(fields: [campaignId], references: [id])
-  observations  GoodsObservation[]
-  candidates    GoodsCandidate[]
-  createdAt     DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime           @updatedAt @db.Timestamptz(3)
+  id           String             @id @default(uuid()) @db.Uuid
+  campaignId   String             @db.Uuid
+  name         String
+  kind         GoodsItemKind
+  note         String?
+  sortOrder    Int                @default(0)
+  campaign     GoodsCampaign      @relation(fields: [campaignId], references: [id])
+  observations GoodsObservation[]
+  candidates   GoodsCandidate[]
+  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(3)
 
   @@unique([campaignId, name])
+  @@unique([id, campaignId])
 }
 
 model GoodsObservation {
-  id                String             @id @default(uuid()) @db.Uuid
-  campaignId        String             @db.Uuid
-  itemId            String?            @db.Uuid
-  cinemaId          String             @db.Uuid
-  status            AvailabilityStatus
-  sourceType        SourceType
-  sourceUrl         String
-  observedAt        DateTime           @db.Timestamptz(3)
-  expiresAt         DateTime?          @db.Timestamptz(3)
-  note              String?
-  reportedByUserId  String?            @db.Uuid
-  campaign          GoodsCampaign      @relation(fields: [campaignId], references: [id])
-  item              GoodsItem?         @relation(fields: [itemId], references: [id])
-  cinema            Cinema             @relation(fields: [cinemaId], references: [id])
-  reportedBy        User?              @relation("ObservationReporter", fields: [reportedByUserId], references: [id])
-  createdAt         DateTime           @default(now()) @db.Timestamptz(3)
+  id               String             @id @default(uuid()) @db.Uuid
+  campaignId       String             @db.Uuid
+  itemId           String?            @db.Uuid
+  cinemaId         String             @db.Uuid
+  status           AvailabilityStatus
+  sourceType       SourceType
+  sourceUrl        String?
+  observedAt       DateTime           @db.Timestamptz(3)
+  expiresAt        DateTime?          @db.Timestamptz(3)
+  note             String?
+  reportedByUserId String?            @db.Uuid
+  campaign         GoodsCampaign      @relation(fields: [campaignId], references: [id])
+  item             GoodsItem?         @relation(fields: [itemId, campaignId], references: [id, campaignId], onDelete: Restrict, onUpdate: NoAction)
+  cinema           Cinema             @relation(fields: [cinemaId], references: [id])
+  reportedBy       User?              @relation("ObservationReporter", fields: [reportedByUserId], references: [id], onDelete: Restrict)
+  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
 
   @@index([campaignId, itemId, cinemaId, observedAt])
 }
@@ -159,16 +203,19 @@ model GoodsCandidate {
   itemId            String?               @db.Uuid
   cinemaId          String?               @db.Uuid
   title             String
-  sourceUrl         String
+  sourceType        SourceType
+  sourceUrl         String?
+  reportedStatus    AvailabilityStatus?
+  note              String?
   observedAt        DateTime              @db.Timestamptz(3)
   reviewStatus      CandidateReviewStatus @default(PENDING)
   reviewNote        String?
   submittedByUserId String?               @db.Uuid
   reviewedByUserId  String?               @db.Uuid
   campaign          GoodsCampaign?        @relation(fields: [campaignId], references: [id])
-  item              GoodsItem?            @relation(fields: [itemId], references: [id])
+  item              GoodsItem?            @relation(fields: [itemId, campaignId], references: [id, campaignId], onDelete: Restrict, onUpdate: NoAction)
   cinema            Cinema?               @relation(fields: [cinemaId], references: [id])
-  submittedBy       User?                 @relation("CandidateSubmitter", fields: [submittedByUserId], references: [id])
+  submittedBy       User?                 @relation("CandidateSubmitter", fields: [submittedByUserId], references: [id], onDelete: Restrict)
   reviewedBy        User?                 @relation("CandidateReviewer", fields: [reviewedByUserId], references: [id])
   createdAt         DateTime              @default(now()) @db.Timestamptz(3)
   updatedAt         DateTime              @updatedAt @db.Timestamptz(3)

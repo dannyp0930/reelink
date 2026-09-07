@@ -2,7 +2,7 @@
 
 Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하는 서비스다.
 
-현재 저장소는 제품 기능을 만들기 전 기반을 정리하는 단계다. 화면은 아직 `create-next-app` 기본 상태이며, 실제 DB·인증·관람 기록·굿즈 수집 기능은 구현되지 않았다.
+현재 로컬 PostgreSQL 연결과 첫 migration, 관람·평점 데이터 모델까지 구현했다. 화면은 아직 `create-next-app` 기본 상태이며 로그인과 관람 기록 입력 UI, 굿즈 운영 기능은 미구현이다.
 
 ## 제품 범위
 
@@ -11,6 +11,8 @@ Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하�
 1. 개인 영화 관람 기록
    - 같은 영화를 여러 번 관람한 기록을 회차별로 남긴다.
    - 관람일, 극장, 상영관, 평점, 메모를 기록한다.
+   - 평점은 5점 만점에 0.5점 단위다. 0점과 미평가를 구분한다.
+   - 내 평점별 모아보기, 높은순·낮은순 정렬, 미평가 필터를 제공한다.
    - 캘린더에서 관람 이력을 확인한다.
 2. 영화 굿즈 Radar
    - 영화별 굿즈 캠페인과 품목을 모아 본다.
@@ -27,7 +29,7 @@ Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하�
 
 ## 현재 상태
 
-2026-09-03 기준 실제 저장소 상태다.
+2026-09-07 기준 실제 저장소 상태다.
 
 | 영역 | 현재 상태 |
 | --- | --- |
@@ -36,10 +38,10 @@ Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하�
 | Frontend | Next.js `16.3.4`, React `19.2.8`, Tailwind CSS 4 |
 | Frontend UI | `create-next-app` 기본 화면. 제품 UI 미구현 |
 | Backend | NestJS `12.0.1`, TypeScript `6.0.3` Hello World API |
-| Database | 미구현. PostgreSQL + Prisma 도입 예정 |
+| Database | 로컬 PostgreSQL 17 + Prisma `7.10.0`, 첫 migration과 DB 테스트 완료 |
 | Auth | 미구현. Google OAuth 단일 provider부터 검토 |
 | Worker | 미구현. 첫 굿즈 source 검증 후 추가 |
-| Infra | Docker, CI/CD, 배포 환경 미구현 |
+| Infra | 로컬 DB용 Docker Compose 추가. CI/CD와 배포 환경 미구현 |
 
 ## 기술 방향
 
@@ -78,10 +80,15 @@ reelink/
 - Node.js `24.20.0`
 - pnpm `11.25.0`
 - Corepack
+- Docker Desktop 실행 상태
+
+첫 실행 전 `backend/.env.example`을 `backend/.env`로 복사한다. 기존 `.env`가 있으면 덮어쓰지 말고 `DATABASE_URL`을 확인한다.
 
 ```bash
 corepack enable pnpm
 pnpm install --frozen-lockfile
+docker compose up -d --wait db
+pnpm --dir backend db:deploy
 pnpm dev
 ```
 
@@ -91,6 +98,8 @@ pnpm dev
 - Backend: `http://localhost:3001`
 
 Backend 환경 변수 예시는 [`backend/.env.example`](backend/.env.example)에 있다. 로컬 비밀 값은 `.env`에 두고 Git에 올리지 않는다.
+
+Compose의 계정은 로컬 개발 전용이며 DB 포트는 `127.0.0.1:5432`에만 노출한다. 운영 환경에는 이 계정을 사용하지 않는다. DB는 named volume에 남는다. 다른 PC에서는 코드를 받은 뒤 migration을 적용하며, 개인 관람 데이터는 Git으로 동기화되지 않는다.
 
 ## 주요 명령
 
@@ -105,10 +114,16 @@ Backend 환경 변수 예시는 [`backend/.env.example`](backend/.env.example)�
 | `pnpm --dir frontend lint` | Frontend lint |
 | `pnpm --dir frontend build` | Frontend build |
 | `pnpm --dir backend test` | Backend test |
+| `pnpm --dir backend db:generate` | Prisma Client 생성 |
+| `pnpm --dir backend db:deploy` | 저장소의 migration 적용 |
+| `pnpm --dir backend db:status` | DB migration 상태 확인 |
+| `pnpm --dir backend test:db` | 실제 로컬 DB의 도메인 제약 테스트 |
+| `pnpm --dir backend test:e2e` | DB 테스트와 Nest HTTP 연결 테스트 |
 
 ## 도메인 원칙
 
 - `MovieViewing`은 영화별 평점 한 건이 아니라 실제 관람 회차마다 한 행을 저장한다.
+- `ratingHalfStars`는 `0~10` 정수이고 표시 평점은 값의 절반이다. 미평가는 `null`이다. 입력은 `ratingToHalfStars`로 검사하며 임의로 반올림하지 않는다.
 - `Movie`와 TMDB·KOBIS 같은 외부 식별자는 분리한다.
 - 극장은 `ACTIVE`, `TEMPORARILY_CLOSED`, `CLOSED` 상태로 관리하고 폐관 데이터를 함부로 삭제하지 않는다.
 - 굿즈 캠페인, 품목, 극장별 현재 상태, 관측 이력을 각각 분리한다.
@@ -133,8 +148,12 @@ Backend 환경 변수 예시는 [`backend/.env.example`](backend/.env.example)�
 
 ### Phase 2 — Auth + Movie + MovieViewing
 
-- PostgreSQL + Prisma 기반 스키마를 만든다.
-- Google OAuth, `USER`/`ADMIN`, 영화 검색, 관람 기록 CRUD를 구현한다.
+- 완료: PostgreSQL + Prisma 연결, 첫 migration, 영화·외부 ID·관람 회차·평점 모델과 DB 검증.
+- 다음: Google OAuth, 세션, `USER`/`ADMIN`, 내 기록 접근 제한.
+- 이후: 영화 검색과 관람 기록 CRUD, 5점 만점·0.5점 단위 평점 입력.
+- 관람 목록에서 평점별 모아보기, 높은순·낮은순 정렬, 미평가 필터를 구현한다.
+
+2026-09-07 실행 우선순위는 DB → 로그인 → 관람 기록·평점 → 평점별 정리 → 캘린더 → 수동 굿즈 MVP → 개인 배포다. 모든 단계는 Astra `high`로 진행한다. 아래 자동 수집·알림 단계는 실제 수요와 source 검증 결과에 따라 선택한다. 최신 완료·대기 상태는 `docs/project-status.md`를 따른다.
 
 ### Phase 3 — Calendar
 
