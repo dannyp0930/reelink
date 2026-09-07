@@ -9,6 +9,7 @@ Reelink의 API와 도메인 규칙을 담당하는 NestJS 앱이다. 목표 구�
 - Jest 30
 - `GET /` Hello World API만 구현됨
 - DB, Prisma, Auth, MovieViewing, Cinema, Goods domain 미구현
+- 수동 MVP Prisma schema 초안은 `prisma/schema.prisma`에 있으며 migration은 아직 실행하지 않음
 - 기본 port `3001`
 
 ## 환경 변수

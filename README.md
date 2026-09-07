@@ -174,6 +174,8 @@ Backend 환경 변수 예시는 [`backend/.env.example`](backend/.env.example)�
 - [Instagram 굿즈 source 사전 검증](docs/source-feasibility/instagram.md)
 - [독립영화관 굿즈 source 사전 검증](docs/source-feasibility/independent-cinemas.md)
 - [굿즈 source 비교와 Phase 0 판단](docs/source-feasibility/comparison.md)
+- [수동 MVP 도메인 필드](docs/domain-fields.md)
+- [Luna 스키마 초안 검토 기록](docs/luna-schema-handoff.md)
 - [Frontend 안내](frontend/README.md)
 - [Backend 안내](backend/README.md)
 - [Codex 하네스](docs/codex-harness.md)

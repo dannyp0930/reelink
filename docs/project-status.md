@@ -4,9 +4,9 @@ PC를 옮겨 작업할 때 이 문서부터 확인한다. 큰 작업을 마치�
 
 ## 현재 상태
 
-- 기준일: 2026-09-03
+- 기준일: 2026-09-07
 - 브랜치: `main`
-- 단계: Phase 0 — Data Feasibility 진행 중, Phase 1 기반 정리 완료
+- 단계: Phase 0 — Data Feasibility 및 수동 MVP 필드 확정 완료, Phase 1 기반 정리 완료; Phase 2 진입 준비
 - Frontend: Next.js `16.3.4`, React `19.2.8`
 - Backend: NestJS `12.0.1`, TypeScript `6.0.3`
 - Database, Auth, 제품 UI: 미구현
@@ -27,23 +27,24 @@ PC를 옮겨 작업할 때 이 문서부터 확인한다. 큰 작업을 마치�
 - Instagram source 사전 검증 완료. 공개 게시물은 발견 링크로만 사용하고 자동 수집·콘텐츠 재배포는 보류
 - 독립영화관 대표 표본(인디스페이스·아트나인) 검증 완료. 이벤트 발견은 가능하지만 실시간 재고와 공통 feed가 없어 수동 운영 우선
 - 전체 source 비교표 작성 완료. 개인 프로젝트는 수동 링크·사용자 제보 기반으로 진행
+- 수동 MVP 도메인 필드 확정안 작성 완료. 현재 상태는 최근 관측값으로 계산하고 원문 링크·확인 시각을 필수로 둔다
+- Luna가 수동 MVP Prisma schema 초안을 작성했다. 상위 모델 검토 전까지 migration은 실행하지 않는다
 
 ## 다음 작업
 
-1. 관리자 링크 등록·사용자 제보 기반 수동 MVP 범위를 확정한다.
-2. 실제 수요가 확인될 때 전주디지털독립영화관·미림극장 등 독립영화관 후보를 같은 기준으로 추가 검증한다.
-3. 수동 MVP 필드가 확정되면 PostgreSQL + Prisma 스키마 작업으로 넘어간다.
+1. `backend/prisma/schema.prisma`를 상위 모델이 검토하고 실제 PostgreSQL에서 validate·migration을 확인한다.
+2. 관리자 링크 등록과 사용자 제보 입력 흐름을 구현한다.
+3. 실제 수요가 확인될 때 전주디지털독립영화관·미림극장 등 독립영화관 후보를 같은 기준으로 추가 검증한다.
 
 ## 마지막 검증
 
-2026-09-03에 다음 명령을 통과했다.
+2026-09-07에 다음 명령을 통과했다.
 
 ```bash
-pnpm peers check
-pnpm --dir backend test -- --runInBand
-pnpm --dir backend test:e2e -- --runInBand
 pnpm --dir backend lint
+pnpm --dir backend test -- --runInBand
 pnpm --dir backend build
+git diff --check
 ```
 
 - 실행 확인: Frontend `200`, Backend `200`

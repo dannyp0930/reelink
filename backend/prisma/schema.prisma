@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum CinemaChain {
+  CGV
+  LOTTE
+  MEGABOX
+  CINE_Q
+  INDEPENDENT
+  OTHER
+}
+
+enum CinemaStatus {
+  ACTIVE
+  TEMPORARILY_CLOSED
+  CLOSED
+}
+
+enum SourceType {
+  OFFICIAL_PAGE
+  OFFICIAL_SOCIAL
+  USER_REPORT
+  ADMIN_NOTE
+}
+
+enum CampaignStatus {
+  DRAFT
+  PUBLISHED
+  ENDED
+}
+
+enum GoodsItemKind {
+  POSTER
+  TICKET
+  CARD
+  STICKER
+  OTHER
+}
+
+enum AvailabilityStatus {
+  UNKNOWN
+  LIKELY_AVAILABLE
+  LOW_OR_DEPLETING
+  SOLD_OUT
+  ENDED
+}
+
+enum CandidateReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                String            @id @default(uuid()) @db.Uuid
+  email             String            @unique
+  role              UserRole          @default(USER)
+  reportedObservations GoodsObservation[] @relation("ObservationReporter")
+  submittedCandidates  GoodsCandidate[]    @relation("CandidateSubmitter")
+  reviewedCandidates   GoodsCandidate[]    @relation("CandidateReviewer")
+  createdAt         DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
+}
+
+model Movie {
+  id            String           @id @default(uuid()) @db.Uuid
+  title         String
+  originalTitle String?
+  releaseDate   DateTime?        @db.Date
+  tmdbId        String?          @unique
+  campaigns     GoodsCampaign[]
+  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime         @updatedAt @db.Timestamptz(3)
+}
+
+model Cinema {
+  id            String             @id @default(uuid()) @db.Uuid
+  name          String
+  chain         CinemaChain
+  status        CinemaStatus       @default(ACTIVE)
+  address       String?
+  observations  GoodsObservation[]
+  candidates    GoodsCandidate[]
+  createdAt     DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime           @updatedAt @db.Timestamptz(3)
+
+  @@unique([chain, name])
+}
+
+model GoodsCampaign {
+  id            String             @id @default(uuid()) @db.Uuid
+  movieId       String             @db.Uuid
+  title         String
+  startsAt      DateTime?          @db.Timestamptz(3)
+  endsAt        DateTime?          @db.Timestamptz(3)
+  sourceType    SourceType
+  sourceUrl     String
+  status        CampaignStatus     @default(DRAFT)
+  movie         Movie              @relation(fields: [movieId], references: [id])
+  items         GoodsItem[]
+  observations  GoodsObservation[]
+  candidates    GoodsCandidate[]
+  createdAt     DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime           @updatedAt @db.Timestamptz(3)
+
+  @@index([movieId, status])
+}
+
+model GoodsItem {
+  id            String             @id @default(uuid()) @db.Uuid
+  campaignId    String             @db.Uuid
+  name          String
+  kind          GoodsItemKind
+  note          String?
+  sortOrder     Int                @default(0)
+  campaign      GoodsCampaign      @relation(fields: [campaignId], references: [id])
+  observations  GoodsObservation[]
+  candidates    GoodsCandidate[]
+  createdAt     DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime           @updatedAt @db.Timestamptz(3)
+
+  @@unique([campaignId, name])
+}
+
+model GoodsObservation {
+  id                String             @id @default(uuid()) @db.Uuid
+  campaignId        String             @db.Uuid
+  itemId            String?            @db.Uuid
+  cinemaId          String             @db.Uuid
+  status            AvailabilityStatus
+  sourceType        SourceType
+  sourceUrl         String
+  observedAt        DateTime           @db.Timestamptz(3)
+  expiresAt         DateTime?          @db.Timestamptz(3)
+  note              String?
+  reportedByUserId  String?            @db.Uuid
+  campaign          GoodsCampaign      @relation(fields: [campaignId], references: [id])
+  item              GoodsItem?         @relation(fields: [itemId], references: [id])
+  cinema            Cinema             @relation(fields: [cinemaId], references: [id])
+  reportedBy        User?              @relation("ObservationReporter", fields: [reportedByUserId], references: [id])
+  createdAt         DateTime           @default(now()) @db.Timestamptz(3)
+
+  @@index([campaignId, itemId, cinemaId, observedAt])
+}
+
+model GoodsCandidate {
+  id                String                @id @default(uuid()) @db.Uuid
+  campaignId        String?               @db.Uuid
+  itemId            String?               @db.Uuid
+  cinemaId          String?               @db.Uuid
+  title             String
+  sourceUrl         String
+  observedAt        DateTime              @db.Timestamptz(3)
+  reviewStatus      CandidateReviewStatus @default(PENDING)
+  reviewNote        String?
+  submittedByUserId String?               @db.Uuid
+  reviewedByUserId  String?               @db.Uuid
+  campaign          GoodsCampaign?        @relation(fields: [campaignId], references: [id])
+  item              GoodsItem?            @relation(fields: [itemId], references: [id])
+  cinema            Cinema?               @relation(fields: [cinemaId], references: [id])
+  submittedBy       User?                 @relation("CandidateSubmitter", fields: [submittedByUserId], references: [id])
+  reviewedBy        User?                 @relation("CandidateReviewer", fields: [reviewedByUserId], references: [id])
+  createdAt         DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime              @updatedAt @db.Timestamptz(3)
+
+  @@index([reviewStatus, createdAt])
+}
