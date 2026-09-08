@@ -4,15 +4,16 @@ PC를 옮겨 작업할 때 이 문서부터 확인한다. 큰 작업을 마치�
 
 ## 현재 상태
 
-- 기준일: 2026-09-07
+- 기준일: 2026-09-08
 - 브랜치: `main`
-- 단계: Phase 2 — Google 로그인·세션·권한 코드와 화면 구현. 실제 Google 로그인 검증 대기
+- 단계: 영화 검색·관람 API — TMDB 검색·선택과 본인 CRUD 구현. 입력 화면 연결 전
 - Frontend: Next.js `16.3.4`, React `19.2.8`
 - Backend: NestJS `12.0.1`, TypeScript `6.0.3`
 - Database: 로컬 PostgreSQL 17 (검증 버전 `17.11`), Prisma `7.10.0`, 도메인·인증 migration 2개 적용 완료
-- Auth: Google OIDC, DB 세션, 전역 인증·권한 검사 구현. Google 자격 증명은 미설정
+- Auth: Google OIDC, DB 세션, 전역 인증·권한 검사 구현. 이 PC의 키 설정과 로컬 실제 로그인 사용자 확인 완료
 - 제품 UI: 로그인·로그아웃, 오류·재시도·모바일 상태 구현. 관람 기록 작성 UI는 미구현
-- 관람 API: 본인 목록·상세 조회만 구현. 작성·수정·삭제와 평점 필터는 다음 작업
+- 관람 API: 본인 CRUD 구현. 평점 필터와 작성 화면은 다음 작업
+- 영화 API: TMDB 검색·선택 구현. 계약과 설정은 `docs/movies-api.md`에 기록
 - 모델 운영: 전 단계 Astra `high`. 구현 → 테스트 → 검토 → 현황 기록 순서
 
 ## 완료
@@ -37,7 +38,7 @@ PC를 옮겨 작업할 때 이 문서부터 확인한다. 큰 작업을 마치�
 - Prisma CLI·Client·adapter를 `7.10.0`으로 고정하고 pnpm에서 `prisma`, `@prisma/engines` 빌드 스크립트만 추가 허용했다.
 - `.env` 로딩, Prisma Client 생성, Nest 연결·종료 처리를 구현했다. 개발 실행과 빌드 시 Client를 생성하며 생성 파일은 Git에서 제외한다.
 - `MovieExternalId`와 회차별 `MovieViewing`을 추가했다. 평점은 `0~10` 반점 단위 정수, 미평가는 `null`이다.
-- `ratingToHalfStars`와 테스트를 추가했다. Prisma의 소수 잘림을 확인해 DB에 넘기기 전에 `0~5점`, `0.5점` 간격을 검사한다. 실제 작성·수정 API 연결은 후속 작업이다.
+- `ratingToHalfStars`와 테스트를 추가했다. Prisma의 소수 잘림을 확인해 DB에 넘기기 전에 `0~5점`, `0.5점` 간격을 검사한다. 작성·수정 API에도 연결했다.
 - 첫 migration `20260907041114_initial_domain`에 굿즈 CHECK와 평점 범위를 통합했다. 별도 CHECK 초안 파일의 내용은 migration에 보존했다.
 - 로컬 `reelink`와 빈 `reelink_test` DB에 첫 migration을 적용했다. 도메인 테스트는 매번 트랜잭션을 롤백하며 입력 데이터를 남기지 않는다.
 - `googleSubject`, `Session`, `OAuthLogin`을 추가하고 `20260907093000_google_auth_sessions` migration을 개발·테스트 DB에 적용했다.
@@ -47,25 +48,55 @@ PC를 옮겨 작업할 때 이 문서부터 확인한다. 큰 작업을 마치�
 - Next의 `/api` 프록시와 로그인 화면을 연결했다. 키가 없으면 로그인 버튼을 비활성화한다. 설정 방법은 `docs/auth-setup.md`에 기록했다.
 - Google 토큰 검증은 로컬 서명 키로, 로그인·권한 통합 흐름은 Google 응답 대체와 실제 테스트 DB로 검증했다. Auth 테스트는 실행별 생성 데이터만 삭제한다. 기존 도메인 테스트는 트랜잭션을 롤백한다.
 
+- 2026-09-08: 사용자가 로컬 3002 포트에서 실제 Google 로그인 성공을 확인했다. 로그아웃·새로고침 후 유지의 실제 계정 검증은 별도로 확인해야 한다.
+- `POST /viewings`, `PATCH /viewings/:id`, `DELETE /viewings/:id`를 추가했다. 소유자는 세션에서 결정하며 수정·삭제 쿼리에도 사용자 조건을 포함한다.
+- 평점, 실제 날짜, UUID, 상영관 100자·메모 5,000자 제한을 검사한다. 선택 항목은 생략 시 유지하고 `null`로 비운다. 허용하지 않은 필드와 NUL 문자는 거부한다.
+- 기존 DB 스키마·의존성을 재사용했다. 영화·극장이 없으면 `400`, 타인 기록이나 없는 관람 기록은 `404`다. 관람 삭제는 영화·극장과 다른 회차에 영향을 주지 않는다.
+- 관람 쓰기 통합 테스트 49개를 추가했다. 인증 가드·실제 PostgreSQL로 검증하며 테스트 전용 사용자·세션·영화·극장은 실행 후 삭제한다. 개인 개발 DB에는 테스트 기록을 만들지 않았다.
+
+- TMDB 검색과 내부 영화 선택 API를 추가했다. Node 기본 `fetch`를 사용하며 외부 응답 검증, 10초 제한, 오류 비식별화, 중복 생성 방지를 적용했다. 새로운 의존성·migration은 없다.
+- 실제 토큰으로 `기생충` 검색·상세 서비스 조회에 성공했다. 검증 프로세스에서만 루트 `.env`의 토큰을 읽었으며 개발 DB에는 저장하지 않았다. 앱 사용 전 `backend/.env`에 토큰 저장·Backend 재시작이 필요하다.
+
 ## 다음 작업
 
-1. `docs/auth-setup.md`를 따라 Google OAuth 클라이언트를 준비하고 `backend/.env`에 입력한다. Backend 재시작 후 실제 계정 로그인·로그아웃을 확인한다. 사용자는 아직 키가 없으며 설정 가이드를 요청했다.
-2. 영화 검색과 관람 기록 CRUD를 만든다. 날짜 입력 검증, `ratingToHalfStars` 연결, 평점·메모 입력을 포함한다.
+1. `TMDB_READ_ACCESS_TOKEN`을 `backend/.env`에 저장하고 Backend를 재시작한다. 현재 토큰은 루트 `.env`에서만 확인했다. 토큰은 채팅·Git에 올리지 않는다.
+2. 영화 검색·선택과 관람 기록 작성·목록·상세·수정·삭제 화면을 연결한다. 날짜·평점·극장·상영관·메모 입력과 실패 시 입력 보존을 포함한다. 극장 선택 API와 TMDB 출처 표기도 이 단계에서 준비한다. 실제 계정의 새로고침·로그아웃 흐름을 확인한다.
 3. 평점별 모아보기, 높은순·낮은순 정렬, 미평가 필터를 구현한다. 영화별 대표 평점은 최근 평가한 회차를 쓰는 안이며 화면 구현 전에 확정한다.
 4. 캘린더 → 수동 굿즈 등록·제보·승인 → 개인 배포 순서로 진행한다. 자동 수집·알림은 수요 확인 후 선택한다.
 
 ## 남은 제약
 
-- 실제 Google 계정 로그인과 운영 HTTPS 환경은 아직 검증하지 않았다. 자동 테스트는 Google Cloud 설정의 정확성을 보장하지 않는다.
+- 로컬 실제 Google 로그인은 사용자 확인 결과다. 운영 HTTPS 환경은 미검증이며 자동 테스트가 Google Cloud 설정의 정확성을 보장하지 않는다.
 - 굿즈의 사용자 제보가 연결된 계정은 삭제를 거부한다. 관람 기록만 있는 계정은 삭제 시 개인 기록도 함께 삭제한다.
 - URL 형식·관리자 승인·만료 및 상충 판정 API는 후속 구현 대상이다.
 - `security-diff-scan` 도구가 없어 자동 보안 스캔은 실행하지 못했다. 이번 작업에서 외부 서비스나 운영 DB는 변경하지 않았다.
 - 관리자 제품 화면, 계정 삭제·익명화 API, 배포 환경 요청 제한은 미구현이다. 첫 가입자를 자동 관리자로 승격하지 않는다.
+- 극장 선택 API, 관람 평점 필터·페이지 이동, 다중 창 수정 충돌 감지는 미구현이다. 현재 관람 목록은 최근 50건이며 정상 수정은 마지막 쓰기가 반영된다.
+- TMDB 검색 UI·메타데이터 자동 갱신·캐시·앱 자체 요청 제한은 미구현이다. 영화 선택·관람 작성은 별도 요청이다.
 - 다른 PC에서 Git과 migration으로 코드·스키마는 재현되지만 로컬 DB의 관람 데이터는 자동 동기화되지 않는다. 실제 데이터 이동은 별도 백업·복원 작업이다.
 
 ## 마지막 검증
 
-2026-09-07에 다음 명령을 통과했다.
+2026-09-08 이번 작업에서 다음 명령을 통과했다.
+
+```bash
+pnpm --dir backend test:e2e viewings
+pnpm --dir backend test:e2e movies
+pnpm --dir backend lint
+pnpm --dir backend test -- --runInBand
+pnpm --dir backend test:e2e
+pnpm --dir backend build
+pnpm --dir backend exec tsc --noEmit --incremental false
+git diff --check
+```
+
+- 관람 API 기본 테스트 46개 통과 후 경계 문자열·NUL 검증을 추가했다. 관람 단계 E2E는 94개였으며 TMDB 39개를 추가한 최종 E2E 133개, 단위 테스트 30개를 통과했다.
+- TMDB 서비스의 실조회는 루트 토큰을 별도 프로세스에 주입해 확인했다. 앱의 Backend 환경 설정 완료나 실제 계정의 HTTP 선택·저장을 검증한 것은 아니다.
+- Backend 개발 서버와 빌드가 `dist`를 함께 사용하면서 개발 서버가 중단됐다. 개발 서버를 재시작한 뒤 3002 프록시의 세션 API `200`, 비로그인 영화 검색·선택 API `401`을 확인했다.
+- 새 API가 없어 `404`로 실패하는 테스트를 먼저 확인하고 구현했다. NUL 검사를 제거했을 때 `400` 대신 PostgreSQL 오류 `500`이 발생하는 것도 재현한 뒤 검사를 복구해 통과했다.
+- Frontend 파일은 수정하지 않았다. 이번 작업에서 Frontend lint/build·화면 회귀 테스트는 재실행하지 않았다.
+
+2026-09-07 이전 기반·인증 작업에서 확인한 명령은 아래와 같다. 이번 작업의 재실행 결과와 구분한다.
 
 ```bash
 pnpm install --frozen-lockfile
@@ -94,7 +125,20 @@ git diff --check
 
 ## 재개 방법
 
+현재 PC는 다른 작업이 3000을 사용하므로 Frontend를 3002로 실행한다. Backend는 3001이며 실행 환경의 `APP_ORIGIN=http://localhost:3002`를 사용한다. Google 승인된 콜백에도 3002 주소를 추가했다. 아래 `pnpm dev`는 기본 3000 실행이므로 현재 PC에서는 포트별 명령을 사용한다.
+
+```powershell
+# Frontend 터미널
+pnpm --dir frontend dev --port 3002
+# 별도 Backend 터미널
+$env:APP_ORIGIN='http://localhost:3002'
+$env:PORT='3001'
+pnpm --dir backend dev
+```
+
 먼저 작업 트리가 깨끗한지 확인한다. 미커밋 변경이 있으면 pull 전에 정리한다.
+
+Backend 빌드 전에는 실행 중인 Backend 개발 서버를 중단한다. `pnpm --dir backend build` 완료 후 위의 Backend 명령으로 다시 실행한다. 개발 서버와 빌드를 동시에 실행하면 공유 출력 폴더 `dist`가 지워지는 동안 서버가 중단될 수 있다.
 
 ```bash
 git status --short

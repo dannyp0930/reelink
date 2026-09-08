@@ -1,6 +1,6 @@
 # Google 로그인 설정
 
-로그인·세션·권한 코드와 자동 테스트는 구현했다. 현재 Google OAuth 자격 증명이 없어 실제 Google 계정 로그인은 아직 검증하지 않았다. 키를 설정하기 전에는 화면의 로그인 버튼이 비활성화된다.
+로그인·세션·권한 코드와 자동 테스트는 구현했다. 2026-09-08 사용자가 로컬 3002 포트에서 실제 Google 로그인 성공을 확인했다. 다른 PC에서는 키를 별도로 설정해야 하며 설정 전에는 로그인 버튼이 비활성화된다.
 
 ## Google Cloud 설정
 
@@ -20,6 +20,8 @@ GOOGLE_CLIENT_SECRET=
 
 공식 안내: [Google OpenID Connect 설정과 서버 흐름](https://developers.google.com/identity/openid-connect/openid-connect).
 
+3000 포트를 다른 작업에서 사용하면 Frontend를 `pnpm --dir frontend dev --port 3002`로 실행한다. Backend 실행 환경의 `APP_ORIGIN`도 `http://localhost:3002`로 맞추고 Google 승인된 리디렉션 URI에 `http://localhost:3002/api/auth/google/callback`을 추가한다. 이 PC는 파일 기본값을 바꾸지 않고 실행 환경에만 3002를 적용했다.
+
 ## 적용된 규칙
 
 - Google `sub`로 계정을 식별한다. 이메일이 같다는 이유로 기존 계정에 자동 연결하지 않는다. 신규 사용자는 `USER`이며 요청에 담긴 역할은 사용하지 않는다.
@@ -28,7 +30,7 @@ GOOGLE_CLIENT_SECRET=
 - 세션은 7일 뒤 만료된다. 브라우저에는 HttpOnly·SameSite=Lax 쿠키를 두고 DB에는 SHA-256 해시만 저장한다. 다시 로그인하면 해당 브라우저의 기존 세션을 교체한다.
 - HTTPS에서는 Secure·`__Host-` 쿠키를 사용한다. production에서는 HTTPS `APP_ORIGIN`이 필수다.
 - 공개로 지정하지 않은 API는 로그인이 필요하다. 변경 요청은 `Origin`이 `APP_ORIGIN`과 일치해야 한다. 개인 응답은 `Cache-Control: no-store`로 반환한다.
-- `/api/viewings`는 본인 기록 최근 50건, `/api/viewings/:id`는 본인 기록 한 건을 반환한다. 타인 기록은 관리자에게도 `404`다. 작성·수정·삭제와 평점 필터는 다음 작업이다.
+- `/api/viewings`는 본인 기록 최근 50건, `/api/viewings/:id`는 본인 기록 한 건을 반환한다. 작성·수정·삭제도 구현했으며 타인 기록 변경은 관리자에게도 `404`다. 입력 규칙은 `docs/domain-fields.md`에 있다. 평점 필터와 입력 화면은 다음 작업이다.
 - 관리자 역할은 DB에서 명시적으로 부여한다. 첫 가입자를 자동 관리자로 만들지 않는다. 실제 관리자 제품 화면은 후속 작업이다.
 - 계정 삭제 시 세션과 개인 관람 기록은 함께 삭제된다. 굿즈 제보가 연결된 계정은 현재 DB 정책상 삭제가 거부된다. 자동 삭제·익명화 기능은 아직 없으며 별도 정책 확정 후 구현한다.
 
@@ -62,4 +64,4 @@ pnpm dlx @playwright/cli -s=reelink-auth run-code --filename=scripts/check-auth-
 pnpm dlx @playwright/cli -s=reelink-auth close
 ```
 
-통합 테스트의 Google 응답 대체와 관리자 확인 경로는 테스트 코드에만 있다. 제품 코드에는 로그인 우회 기능이 없다. 실제 Google 로그인, 운영 HTTPS·프록시 설정, 배포 환경의 요청 제한은 별도 확인이 필요하다.
+통합 테스트의 Google 응답 대체와 관리자 확인 경로는 테스트 코드에만 있다. 제품 코드에는 로그인 우회 기능이 없다. 로컬 실제 로그인은 사용자 확인 결과이며 운영 HTTPS·프록시 설정, 배포 환경의 요청 제한은 별도 확인이 필요하다.

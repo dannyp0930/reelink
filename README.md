@@ -2,7 +2,7 @@
 
 Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하는 서비스다.
 
-현재 로컬 PostgreSQL 연결, 관람·평점 데이터 모델, Google 로그인·세션·권한 코드와 로그인 화면까지 구현했다. 실제 Google 계정 로그인은 OAuth 설정 후 검증해야 한다. 관람 기록 입력 UI와 굿즈 운영 기능은 미구현이다.
+현재 로컬 PostgreSQL 연결, TMDB 영화 검색·선택 API, 관람·평점 CRUD API, Google 로그인·세션·권한과 로그인 화면까지 구현했다. 2026-09-08 사용자가 로컬 실제 Google 로그인 성공을 확인했다. 영화 검색·관람 기록 입력 UI와 굿즈 운영 기능은 미구현이다.
 
 ## 제품 범위
 
@@ -29,7 +29,7 @@ Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하�
 
 ## 현재 상태
 
-2026-09-07 기준 실제 저장소 상태다.
+2026-09-08 기준 실제 저장소 상태다.
 
 | 영역 | 현재 상태 |
 | --- | --- |
@@ -37,9 +37,10 @@ Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하�
 | Runtime | Node.js `24.20.0`, pnpm `11.25.0` 고정 |
 | Frontend | Next.js `16.3.4`, React `19.2.8`, Tailwind CSS 4 |
 | Frontend UI | 로그인·로그아웃 화면, 오류·재시도·모바일 상태 구현 |
-| Backend | NestJS `12.0.1`, TypeScript `6.0.3`, 인증·본인 관람 목록·상세 API |
+| Backend | NestJS `12.0.1`, TypeScript `6.0.3`, 인증·본인 관람 CRUD API |
 | Database | 로컬 PostgreSQL 17 + Prisma `7.10.0`, 도메인·세션 migration 적용 |
-| Auth | Google OIDC·DB 세션·권한 구현. 실제 Google 로그인 검증 대기 |
+| Auth | Google OIDC·DB 세션·권한 구현. 로컬 실제 로그인 사용자 확인 |
+| Movie search | TMDB 검색·내부 영화 선택 API 구현. 실제 검색·상세 서비스 조회 확인. 화면 연결 전 |
 | Worker | 미구현. 첫 굿즈 source 검증 후 추가 |
 | Infra | 로컬 DB용 Docker Compose 추가. CI/CD와 배포 환경 미구현 |
 
@@ -188,6 +189,7 @@ Compose의 계정은 로컬 개발 전용이며 DB 포트는 `127.0.0.1:5432`에
 ## 문서
 
 - [현재 작업 현황과 다음 작업](docs/project-status.md)
+- [TMDB 영화 검색·선택 API](docs/movies-api.md)
 - [CGV 굿즈 source 사전 검증](docs/source-feasibility/cgv.md)
 - [롯데시네마 굿즈 source 사전 검증](docs/source-feasibility/lotte-cinema.md)
 - [메가박스 굿즈 source 사전 검증](docs/source-feasibility/megabox.md)
