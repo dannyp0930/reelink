@@ -123,7 +123,17 @@ export class TmdbService {
     return {
       page,
       totalPages: Math.min(data.total_pages as number, 500),
-      results: data.results.map(movieSummary),
+      results: data.results.map((value: unknown) => {
+        const movie = movieSummary(value);
+        const path = record(value).poster_path;
+        // Optional artwork must not break search or introduce arbitrary image hosts.
+        const posterUrl =
+          typeof path === 'string' &&
+          /^\/[a-zA-Z0-9_-]{1,200}\.(jpg|png)$/.test(path)
+            ? `https://image.tmdb.org/t/p/w154${path}`
+            : null;
+        return { ...movie, posterUrl };
+      }),
     };
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ViewingWorkspace from "./viewing-workspace";
 
 type Session = { user: { id: string; email: string; role: "USER" | "ADMIN" } | null; googleAvailable: boolean };
 
@@ -26,7 +27,7 @@ export default function AuthPanel() {
   const buttonClass = "inline-flex min-h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-foreground px-5 py-3 text-sm font-semibold text-background hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground";
 
   return (
-    <section aria-labelledby="account-heading" className="w-full min-w-0 max-w-md rounded-2xl border border-foreground/15 p-6 sm:p-8">
+    <section aria-labelledby="account-heading" className="w-full min-w-0 rounded-2xl border border-foreground/15 p-6 sm:p-8">
       <h2 id="account-heading" className="text-xl font-semibold">내 영화 기록</h2>
       <div className="mt-4" aria-live="polite" aria-busy={!session && !failed}>
         {failed ? (
@@ -39,7 +40,7 @@ export default function AuthPanel() {
         ) : session.user ? (
           <>
             <p className="text-sm leading-6 break-all">{session.user.email}</p>
-            <p className="mt-2 mb-6 text-sm leading-6">로그인했어요. 관람 기록 입력 기능은 준비 중이에요.</p>
+            <p className="mt-2 mb-6 text-sm leading-6">로그인했어요. 나만의 관람 기록을 남겨보세요.</p>
             <form action="/api/auth/logout" method="post">
               <button type="submit" className={buttonClass}>로그아웃</button>
             </form>
@@ -59,6 +60,7 @@ export default function AuthPanel() {
           </>
         )}
       </div>
+      {session?.user ? <ViewingWorkspace key={session.user.id} /> : null}
     </section>
   );
 }

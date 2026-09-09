@@ -15,10 +15,13 @@ TMDB_READ_ACCESS_TOKEN=
 `GET /api/movies/search?q=기생충&page=1`
 
 - `q`: 앞뒤 공백을 제거한 1~200자 문자열. 제어 문자는 거부한다.
+- 화면은 입력을 멈춘 뒤 400ms 후 검색한다. 마지막 한글이 조합 중이어도 현재 입력값으로 검색하며 포커스를 옮기지 않는다. 조합 확정용 Enter는 제출하지 않고 일반 Enter는 즉시 검색한다. 별도 검색 버튼은 없다. 새 입력 시 진행 중인 브라우저 요청을 취소하고 오래된 응답을 무시한다. 빈 입력은 결과를 비운다. Infinite scroll 대신 페이지 버튼을 유지한다.
 - `page`: 생략하면 1. 1~500 정수이며 배열·소수·지수 표기는 거부한다.
 - TMDB의 `ko-KR`, `include_adult=false` 검색을 사용한다. 검색만으로 DB에 영화를 저장하지 않는다.
-- 응답: `page`, `totalPages`, `results`. 결과는 `tmdbId`, `title`, `originalTitle`, `releaseDate`만 포함한다.
-- `releaseDate`는 `YYYY-MM-DD` 또는 `null`이다. 원제·개봉일이 비어 있으면 `null`로 반환한다. 포스터·줄거리·TMDB 평점은 이번 범위에 포함하지 않는다.
+- 응답: `page`, `totalPages`, `results`. 결과는 `tmdbId`, `title`, `originalTitle`, `releaseDate`, `posterUrl`을 포함한다.
+- `releaseDate`는 `YYYY-MM-DD` 또는 `null`이다. 원제·개봉일이 비어 있으면 `null`로 반환한다. 줄거리·TMDB 평점은 이번 범위에 포함하지 않는다.
+- `posterUrl`은 검증한 `poster_path`로 만든 `https://image.tmdb.org/t/p/w154/...` 주소 또는 `null`이다. 이미지 경로가 없거나 허용 형식이 아니면 검색을 중단하지 않고 `null`을 반환한다. 포스터를 DB에 저장하지 않는다.
+- 화면은 60×90px 썸네일을 지연 로딩하며 이미지 실패 시 같은 크기의 안내를 표시한다. 브라우저가 TMDB 이미지 CDN에서 직접 읽고 API 토큰은 보내지 않는다. 검색 결과 영역은 최대 28rem 또는 화면 높이의 55% 안에서 스크롤된다.
 
 ## 영화 선택
 

@@ -125,6 +125,7 @@ describe('TMDB movie selection (local PostgreSQL)', () => {
           title: marker,
           originalTitle: 'Original title',
           releaseDate: '2024-02-29',
+          posterUrl: null,
         },
       ],
     });
@@ -168,6 +169,34 @@ describe('TMDB movie selection (local PostgreSQL)', () => {
       results: [{ releaseDate: null, originalTitle: null }],
     });
   });
+
+  it.each([
+    ['/abc123.jpg', 'https://image.tmdb.org/t/p/w154/abc123.jpg'],
+    ['/abc123.png', 'https://image.tmdb.org/t/p/w154/abc123.png'],
+    [null, null],
+    [undefined, null],
+    ['', null],
+    ['https://attacker.example/poster.jpg', null],
+    ['//attacker.example/poster.jpg', null],
+    ['/../poster.jpg', null],
+    ['/poster.svg', null],
+    ['/poster.jpg?token=secret', null],
+    [123, null],
+  ])(
+    'returns a fixed-host thumbnail or null (case %#)',
+    async (path, expected) => {
+      fetchMock.mockResolvedValueOnce(
+        json({
+          page: 1,
+          total_pages: 1,
+          results: [{ ...movie(), poster_path: path }],
+        }),
+      );
+      expect((await search({ q: 'movie' }).expect(200)).body).toMatchObject({
+        results: [{ posterUrl: expected }],
+      });
+    },
+  );
 
   it.each([
     {},

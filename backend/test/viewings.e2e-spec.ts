@@ -97,6 +97,24 @@ describe('Viewing writes (local PostgreSQL)', () => {
 
   const input = () => ({ movieId, watchedOn: '2024-02-29' });
 
+  it('lists cinema choices with status for historical viewings and requires login', async () => {
+    await request(app.getHttpServer()).get('/cinemas').expect(401);
+    await prisma.cinema.update({
+      where: { id: cinemaId },
+      data: { status: 'CLOSED' },
+    });
+    const response = await request(app.getHttpServer())
+      .get('/cinemas')
+      .set('Cookie', `${config.sessionCookie}=${ownerToken}`)
+      .expect(200);
+    expect(response.body).toContainEqual({
+      id: cinemaId,
+      name: cinemaId,
+      chain: 'INDEPENDENT',
+      status: 'CLOSED',
+    });
+  });
+
   async function fixture() {
     return prisma.movieViewing.create({
       data: {
