@@ -14,6 +14,31 @@ const button = "min-h-12 rounded-xl border border-foreground/30 px-4 py-2 text-s
 const field = "mt-2 block min-h-12 w-full min-w-0 rounded-xl border border-foreground/30 bg-background px-3 py-2 text-base text-foreground focus-visible:outline-2 focus-visible:outline-offset-2";
 const dateFormat = new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeZone: "UTC" });
 
+function RatingField() {
+  const [rating, setRating] = useState("");
+  const star = "m12 3 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.6l6.3-.9Z";
+  const radio = "peer absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-default";
+  return <fieldset className="min-w-0 text-sm font-medium" aria-describedby="rating-help">
+    <legend>내 평점</legend>
+    <span id="rating-help" className="sr-only">선택한 별을 다시 누르거나 Delete 키를 누르면 평점을 해제합니다.</span>
+    <span className="sr-only" aria-live="polite">{rating === "" ? "미평가" : `${rating}점`}</span>
+    {rating === "" ? <input type="hidden" name="rating" value="" /> : null}
+    <div className="mt-2 flex w-full max-w-60">
+      {Array.from({ length: 5 }, (_, index) => <div key={index} className="relative flex min-h-12 w-1/5">
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="pointer-events-none absolute inset-0 h-full w-full" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"><path d={star} /></svg>
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="pointer-events-none absolute inset-0 h-full w-full" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" style={{ clipPath: `inset(0 ${100 - Math.min(1, Math.max(0, Number(rating) - index)) * 100}% 0 0)` }}><path d={star} /></svg>
+        {[0.5, 1].map(half => <label key={half} className="relative min-h-12 w-1/2 touch-manipulation">
+          <input type="radio" name="rating" value={index + half} checked={rating === String(index + half)} onChange={event => setRating(event.target.value)}
+            onClick={() => { if (rating === String(index + half)) setRating(""); }}
+            onKeyDown={event => { if (event.key === "Delete") { event.preventDefault(); setRating(""); } }}
+            aria-label={`${index + half}점`} autoComplete="off" className={radio} />
+          <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-sm peer-enabled:peer-hover:bg-foreground/10 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-disabled:opacity-50" />
+        </label>)}
+      </div>)}
+    </div>
+  </fieldset>;
+}
+
 function Poster({ url, title }: { url: string | null; title: string }) {
   const [failed, setFailed] = useState(false);
   return <div className="flex h-[90px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-foreground/10">
@@ -219,10 +244,7 @@ export default function ViewingWorkspace() {
           <fieldset disabled={!!busy || !!saved} className="grid min-w-0 gap-5 sm:grid-cols-2">
             <legend className="sr-only">관람 정보</legend>
             <label className="min-w-0 text-sm font-medium">관람 날짜<input ref={dateInput} name="watchedOn" type="date" min="0001-01-01" max="9999-12-31" required autoComplete="off" className={field} /></label>
-            <label className="min-w-0 text-sm font-medium">내 평점<select name="rating" defaultValue="" className={field} autoComplete="off">
-              <option value="">미평가</option>
-              {Array.from({length:11}, (_, index) => <option key={index} value={index / 2}>{index / 2}점</option>)}
-            </select></label>
+            <RatingField />
             <div className="min-w-0"><label className="text-sm font-medium">극장<select name="cinemaId" defaultValue="" className={field} autoComplete="off">
               <option value="">미지정</option>
               {cinemas?.map(cinema => <option key={cinema.id} value={cinema.id}>{cinema.name}{cinema.status === "CLOSED" ? " (폐업)" : cinema.status === "TEMPORARILY_CLOSED" ? " (휴업)" : ""}</option>)}
