@@ -97,6 +97,128 @@ describe('Viewing writes (local PostgreSQL)', () => {
 
   const input = () => ({ movieId, watchedOn: '2024-02-29' });
 
+  it.each([
+    {
+      viewingType: 'THEATER',
+      cinemaId,
+      auditorium: '3관',
+      screeningFormat: 'IMAX',
+      watchedTime: '00:00',
+    },
+    {
+      viewingType: 'STREAMING',
+      streamingService: 'Netflix',
+      watchedTime: '23:59',
+    },
+    { viewingType: 'OTHER', viewingDetail: 'Blu-ray', watchedTime: null },
+    { viewingType: null, watchedTime: null },
+  ])(
+    'round-trips viewing context %# without changing the calendar day',
+    async (context) => {
+      const created = await write('post')
+        .send({ ...input(), ...context })
+        .expect(201);
+      expect(created.body).toMatchObject({
+        ...context,
+        watchedOn: '2024-02-29T00:00:00.000Z',
+      });
+      const id = (created.body as { id: string }).id;
+      const read = await request(app.getHttpServer())
+        .get(`/viewings/${id}`)
+        .set('Cookie', `${config.sessionCookie}=${ownerToken}`)
+        .expect(200);
+      expect(read.body).toMatchObject(context);
+      const patched = await write('patch', `/viewings/${id}`)
+        .send({ note: 'keep context' })
+        .expect(200);
+      expect(patched.body).toMatchObject(context);
+      const list = await request(app.getHttpServer())
+        .get('/viewings')
+        .set('Cookie', `${config.sessionCookie}=${ownerToken}`)
+        .expect(200);
+      expect(list.body).toContainEqual(
+        expect.objectContaining({ id, ...context }),
+      );
+    },
+  );
+
+  it('changes type atomically, clears incompatible details and preserves omitted time', async () => {
+    const created = await write('post')
+      .send({
+        ...input(),
+        cinemaId,
+        auditorium: '3관',
+        screeningFormat: 'IMAX',
+        watchedTime: '19:30',
+      })
+      .expect(201);
+    expect(created.body).toMatchObject({ viewingType: 'THEATER' });
+    const path = `/viewings/${(created.body as { id: string }).id}`;
+    const streaming = await write('patch', path)
+      .send({ viewingType: 'STREAMING', streamingService: 'TVING' })
+      .expect(200);
+    expect(streaming.body).toMatchObject({
+      cinemaId: null,
+      auditorium: null,
+      screeningFormat: null,
+      viewingType: 'STREAMING',
+      streamingService: 'TVING',
+      watchedTime: '19:30',
+    });
+    await write('patch', path)
+      .send({ auditorium: 'wrong type', note: 'must not persist' })
+      .expect(400);
+    await write('patch', path, strangerToken)
+      .send({ viewingType: 'OTHER', viewingDetail: 'forged' })
+      .expect(404);
+    const other = await write('patch', path)
+      .send({ viewingType: 'OTHER', viewingDetail: 'TV 방송' })
+      .expect(200);
+    expect(other.body).toMatchObject({
+      streamingService: null,
+      viewingDetail: 'TV 방송',
+      note: null,
+    });
+    const cleared = await write('patch', path)
+      .send({ viewingType: null, watchedTime: null })
+      .expect(200);
+    expect(cleared.body).toMatchObject({
+      viewingType: null,
+      watchedTime: null,
+      viewingDetail: null,
+      cinemaId: null,
+    });
+  });
+
+  it.each([
+    { watchedTime: '' },
+    { watchedTime: '9:30' },
+    { watchedTime: '24:00' },
+    { watchedTime: '12:60' },
+    { watchedTime: '12:30:00' },
+    { watchedTime: '12:30\n' },
+    { watchedTime: 1230 },
+    { viewingType: 'OTT' },
+    { viewingType: [] },
+    { viewingType: 'STREAMING', cinemaId },
+    { viewingType: 'OTHER', screeningFormat: 'IMAX' },
+    { viewingType: 'THEATER', streamingService: 'Netflix' },
+    { viewingType: null, viewingDetail: 'unknown' },
+    { screeningFormat: 'a'.repeat(51) },
+    { streamingService: 'a'.repeat(81) },
+    { viewingDetail: 'a'.repeat(201) },
+    { streamingService: 'bad\u0000value' },
+  ])('rejects invalid context on create and patch %#', async (invalid) => {
+    const row = await fixture();
+    await write('post')
+      .send({ ...input(), ...invalid })
+      .expect(400);
+    await write('patch', `/viewings/${row.id}`).send(invalid).expect(400);
+    expect(
+      await prisma.movieViewing.findUnique({ where: { id: row.id } }),
+    ).toEqual(row);
+  });
+
   it('lists cinema choices with status for historical viewings and requires login', async () => {
     await request(app.getHttpServer()).get('/cinemas').expect(401);
     await prisma.cinema.update({

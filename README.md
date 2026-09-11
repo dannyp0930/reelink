@@ -2,7 +2,7 @@
 
 Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하는 서비스다.
 
-현재 로컬 PostgreSQL 연결, TMDB 영화 검색·선택 API, 관람·평점 CRUD API, Google 로그인·세션·권한과 로그인 화면까지 구현했다. 2026-09-08 사용자가 로컬 실제 Google 로그인 성공을 확인했다. 영화 검색·관람 기록 입력 UI와 굿즈 운영 기능은 미구현이다.
+현재 로컬 PostgreSQL 연결, TMDB 영화 검색·선택, 관람·평점 CRUD API, Google 로그인과 검색·관람 작성 초기 UI를 구현했다. 검색 포스터·debounce·별점 입력과 전체 관람 폼은 응답 대체 테스트를 통과했다. 실제 계정 통합 검증, 리스트·캘린더 화면 분리와 굿즈 운영 기능은 남아 있다. 최신 계획은 [내 기록 UI 구현 계획](docs/viewing-ui-plan.md), 완료 근거는 [작업 현황](docs/project-status.md)을 따른다.
 
 ## 제품 범위
 
@@ -29,18 +29,18 @@ Reelink는 영화, 개인의 관람 경험, 극장, 영화 굿즈를 연결하�
 
 ## 현재 상태
 
-2026-09-08 기준 실제 저장소 상태다.
+2026-09-11 기준 저장소 상태다. 이전 테스트 결과와 이번 문서 갱신을 구분한다.
 
 | 영역 | 현재 상태 |
 | --- | --- |
 | Repository | pnpm workspace와 루트 단일 lockfile 구성 완료 |
 | Runtime | Node.js `24.20.0`, pnpm `11.25.0` 고정 |
 | Frontend | Next.js `16.3.4`, React `19.2.8`, Tailwind CSS 4 |
-| Frontend UI | 로그인·로그아웃 화면, 오류·재시도·모바일 상태 구현 |
+| Frontend UI | 로그인·검색·관람 작성·최근 기록 초기 화면. 별점 포함 관람 폼 응답 대체 테스트 통과 |
 | Backend | NestJS `12.0.1`, TypeScript `6.0.3`, 인증·본인 관람 CRUD API |
 | Database | 로컬 PostgreSQL 17 + Prisma `7.10.0`, 도메인·세션 migration 적용 |
 | Auth | Google OIDC·DB 세션·권한 구현. 로컬 실제 로그인 사용자 확인 |
-| Movie search | TMDB 검색·내부 영화 선택 API 구현. 실제 검색·상세 서비스 조회 확인. 화면 연결 전 |
+| Movie search | TMDB 검색·선택 화면 연결, 포스터·400ms debounce 검증 |
 | Worker | 미구현. 첫 굿즈 source 검증 후 추가 |
 | Infra | 로컬 DB용 Docker Compose 추가. CI/CD와 배포 환경 미구현 |
 
@@ -152,11 +152,11 @@ Compose의 계정은 로컬 개발 전용이며 DB 포트는 `127.0.0.1:5432`에
 ### Phase 2 — Auth + Movie + MovieViewing
 
 - 완료: PostgreSQL + Prisma 연결, 첫 migration, 영화·외부 ID·관람 회차·평점 모델과 DB 검증.
-- 완료: Google OIDC·DB 세션·`USER`/`ADMIN` 권한 검사와 내 기록 조회 제한. Google 자격 증명 설정 후 실제 로그인 검증은 남아 있다.
-- 다음: 실제 Google 로그인 확인, 영화 검색과 관람 기록 CRUD, 5점 만점·0.5점 단위 평점 입력.
+- 완료: Google OIDC·DB 세션·`USER`/`ADMIN` 권한 검사와 내 기록 조회 제한. 2026-09-08 사용자가 로컬 실제 로그인 성공을 확인했다.
+- 완료: 영화 검색·선택과 관람 CRUD API, 5점 만점·0.5점 단위 별점 입력 및 관람 폼 응답 대체 테스트. 다음은 Repov 참고 설계와 화면 분리다.
 - 관람 목록에서 평점별 모아보기, 높은순·낮은순 정렬, 미평가 필터를 구현한다.
 
-2026-09-07 실행 우선순위는 DB → 로그인 → 관람 기록·평점 → 평점별 정리 → 캘린더 → 수동 굿즈 MVP → 개인 배포다. 모든 단계는 Astra `high`로 진행한다. 아래 자동 수집·알림 단계는 실제 수요와 source 검증 결과에 따라 선택한다. 최신 완료·대기 상태는 `docs/project-status.md`를 따른다.
+2026-09-11 계획은 기존 작성 검증 완료 → 관람 시각·극장/OTT/기타 데이터 계약 → TMDB 개봉연도·러닝타임·포스터와 극장 검색 → 조회 보강 → 기록 route → 캘린더·평점 필터 → 통합 검증 → 수동 굿즈 MVP → 개인 배포다. Repov 참고 시각 설계는 기록 route 구현 전에 마친다. 신규 시각·유형 기능은 아직 구현하지 않았다. 리스트와 캘린더는 같은 기록의 보기 전환이며 기본 모델은 전 단계 Astra `high`다. 상세 완료 기준은 `docs/viewing-ui-plan.md`를 따른다. 아래 자동 수집·알림 단계는 선택 작업이다.
 
 ### Phase 3 — Calendar
 
@@ -168,7 +168,7 @@ Compose의 계정은 로컬 개발 전용이며 DB 포트는 `127.0.0.1:5432`에
 
 ### Phase 5 — First Goods Source
 
-- Phase 0에서 검증한 source 하나만 선택해 end-to-end 수집을 완성한다.
+- 현재 MVP는 공식 링크와 수동 등록·제보·승인을 우선한다. 자동 수집은 허용 범위와 필요가 확인되면 source 하나부터 검증한다.
 
 ### Phase 6 — More Sources + Independent Cinemas
 
@@ -188,6 +188,7 @@ Compose의 계정은 로컬 개발 전용이며 DB 포트는 `127.0.0.1:5432`에
 
 ## 문서
 
+- [내 기록 UI 구현 계획](docs/viewing-ui-plan.md)
 - [현재 작업 현황과 다음 작업](docs/project-status.md)
 - [TMDB 영화 검색·선택 API](docs/movies-api.md)
 - [CGV 굿즈 source 사전 검증](docs/source-feasibility/cgv.md)

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ConflictException,
   Delete,
   Get,
   HttpCode,
@@ -15,7 +16,7 @@ import {
 import type { AuthenticatedRequest } from '../auth/auth.metadata';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { parseViewingInput } from './viewing-input';
+import { parseViewingInput, resolveViewingContext } from './viewing-input';
 
 @Controller('viewings')
 export class MovieViewingsController {
@@ -23,7 +24,7 @@ export class MovieViewingsController {
 
   @Post()
   async create(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
-    const data = parseViewingInput(body, 'create');
+    const data = resolveViewingContext(parseViewingInput(body, 'create'));
     try {
       return await this.prisma.movieViewing.create({
         data: { ...data, userId: request.user!.id },
@@ -42,12 +43,23 @@ export class MovieViewingsController {
   ) {
     const data = parseViewingInput(body, 'patch');
     try {
-      // Ownership is part of the write, not a separate check that can race.
-      return await this.prisma.movieViewing.update({
-        where: { id, userId: request.user!.id },
-        data,
-        include: { movie: true },
-      });
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const where = { id, userId: request.user!.id };
+          const current = await tx.movieViewing.findFirst({
+            where,
+            select: { viewingType: true },
+          });
+          if (!current) throw new NotFoundException();
+          // The type used to validate a partial patch must not race a type change.
+          return tx.movieViewing.update({
+            where,
+            data: resolveViewingContext(data, current.viewingType),
+            include: { movie: true },
+          });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
     } catch (error) {
       this.rethrowWriteError(error);
     }
@@ -68,6 +80,10 @@ export class MovieViewingsController {
   private rethrowWriteError(error: unknown): never {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2025') throw new NotFoundException();
+      if (error.code === 'P2034')
+        throw new ConflictException(
+          'Viewing changed concurrently. Reload and retry.',
+        );
       if (error.code === 'P2003')
         throw new BadRequestException(
           'Referenced movie or cinema does not exist',

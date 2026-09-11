@@ -1,11 +1,17 @@
 import { BadRequestException } from '@nestjs/common';
+import type { ViewingType } from '../generated/prisma/client';
 import { ratingToHalfStars } from './rating';
 
 type ViewingInput = {
   movieId: string;
   watchedOn: Date;
+  watchedTime?: string | null;
+  viewingType?: ViewingType | null;
   cinemaId?: string | null;
   auditorium?: string | null;
+  screeningFormat?: string | null;
+  streamingService?: string | null;
+  viewingDetail?: string | null;
   ratingHalfStars?: number | null;
   note?: string | null;
 };
@@ -13,8 +19,13 @@ type ViewingInput = {
 const fields = [
   'movieId',
   'watchedOn',
+  'watchedTime',
+  'viewingType',
   'cinemaId',
   'auditorium',
+  'screeningFormat',
+  'streamingService',
+  'viewingDetail',
   'rating',
   'note',
 ];
@@ -87,6 +98,40 @@ export function parseViewingInput(
     data.movieId = readId(input.movieId, 'movieId');
   if (mode === 'create' || Object.hasOwn(input, 'watchedOn'))
     data.watchedOn = readDate(input.watchedOn);
+  if (Object.hasOwn(input, 'watchedTime')) {
+    const value = input.watchedTime;
+    if (
+      value !== null &&
+      (typeof value !== 'string' ||
+        value.length !== 5 ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(value))
+    )
+      throw new BadRequestException(
+        'watchedTime must be null or HH:mm (00:00..23:59)',
+      );
+    data.watchedTime = value;
+  }
+  if (Object.hasOwn(input, 'viewingType')) {
+    const value = input.viewingType;
+    if (
+      value !== null &&
+      value !== 'THEATER' &&
+      value !== 'STREAMING' &&
+      value !== 'OTHER'
+    )
+      throw new BadRequestException(
+        'viewingType must be null, THEATER, STREAMING or OTHER',
+      );
+    data.viewingType = value;
+  }
+  for (const [field, limit] of [
+    ['screeningFormat', 50],
+    ['streamingService', 80],
+    ['viewingDetail', 200],
+  ] as const) {
+    if (Object.hasOwn(input, field))
+      data[field] = readText(input[field], field, limit);
+  }
   if (Object.hasOwn(input, 'cinemaId'))
     data.cinemaId =
       input.cinemaId === null ? null : readId(input.cinemaId, 'cinemaId');
@@ -101,6 +146,36 @@ export function parseViewingInput(
       if (error instanceof RangeError)
         throw new BadRequestException(error.message);
       throw error;
+    }
+  }
+  return data;
+}
+
+export function resolveViewingContext<T extends Partial<ViewingInput>>(
+  input: T,
+  currentType: ViewingType | null = null,
+): T {
+  const data = { ...input };
+  const explicit = input.viewingType !== undefined;
+  const type = explicit
+    ? input.viewingType
+    : (currentType ?? (input.cinemaId ? 'THEATER' : null));
+  if (explicit || type !== currentType) data.viewingType = type;
+  const groups = [
+    ['THEATER', ['cinemaId', 'auditorium', 'screeningFormat']],
+    ['STREAMING', ['streamingService']],
+    ['OTHER', ['viewingDetail']],
+  ] as const;
+  for (const [allowedType, keys] of groups) {
+    if (type === allowedType) continue;
+    for (const key of keys) {
+      // Legacy clients/records may have auditorium text without a known type.
+      if (!explicit && type === null && key === 'auditorium') continue;
+      if (input[key] !== undefined && input[key] !== null)
+        throw new BadRequestException(
+          `${key} requires viewingType ${allowedType}`,
+        );
+      if (explicit) data[key] = null;
     }
   }
   return data;

@@ -33,6 +33,12 @@ enum CinemaStatus {
   CLOSED
 }
 
+enum ViewingType {
+  THEATER
+  STREAMING
+  OTHER
+}
+
 enum SourceType {
   OFFICIAL_PAGE
   OFFICIAL_SOCIAL
@@ -128,20 +134,25 @@ model MovieExternalId {
 }
 
 model MovieViewing {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @db.Uuid
-  movieId         String   @db.Uuid
-  watchedOn       DateTime @db.Date
-  cinemaId        String?  @db.Uuid
-  auditorium      String?
+  id               String       @id @default(uuid()) @db.Uuid
+  userId           String       @db.Uuid
+  movieId          String       @db.Uuid
+  watchedOn        DateTime     @db.Date
+  watchedTime      String?      @db.VarChar(5)
+  viewingType      ViewingType?
+  cinemaId         String?      @db.Uuid
+  auditorium       String?
+  screeningFormat  String?      @db.VarChar(50)
+  streamingService String?      @db.VarChar(80)
+  viewingDetail    String?      @db.VarChar(200)
   /// Half-star units: 0..10 represent 0..5 stars; null means unrated.
-  ratingHalfStars Int?     @db.SmallInt
-  note            String?
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  movie           Movie    @relation(fields: [movieId], references: [id], onDelete: Restrict)
-  cinema          Cinema?  @relation(fields: [cinemaId], references: [id], onDelete: Restrict)
-  createdAt       DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  ratingHalfStars  Int?         @db.SmallInt
+  note             String?
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie            Movie        @relation(fields: [movieId], references: [id], onDelete: Restrict)
+  cinema           Cinema?      @relation(fields: [cinemaId], references: [id], onDelete: Restrict)
+  createdAt        DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime     @updatedAt @db.Timestamptz(3)
 
   @@index([userId, watchedOn])
   @@index([userId, ratingHalfStars])
