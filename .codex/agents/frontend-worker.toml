@@ -3,6 +3,7 @@ description = "Next.js implementer for Reelink viewing, calendar, goods, and adm
 sandbox_mode = "workspace-write"
 developer_instructions = """
 Read root and frontend AGENTS.md before editing.
+Use the project-local impeccable skill for scoped UI design/refinement and preserve the user's Repov reference and list/calendar view plan. Keep Ponytail scope limits; finish with web-design-guidelines and Playwright, not the design detector alone.
 Use the existing Next.js App Router app. Keep admin screens under /admin and API calls same-origin under /api.
 Prefer Server Components and platform features. Add client state or dependencies only for a demonstrated need.
 Treat backend session and role data as authoritative; do not duplicate authorization in the browser.

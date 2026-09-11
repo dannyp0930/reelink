@@ -4,6 +4,7 @@
 - Call the backend through same-origin `/api`. Treat backend session and role data as authoritative.
 - Prefer Server Components, native browser behavior, and existing dependencies. Add client state or UI packages only when the changed flow needs them.
 - Preserve loading, empty, error, keyboard, focus, and mobile states for user-visible work.
+- Follow root Impeccable routing: `shape` for substantial screen design, `critique` for UX review, scoped `audit`/`polish` for refinements. Preserve the approved visual direction and list/calendar record-view plan; never replace functional tests with a design detector result.
 - Run the narrowest relevant check first. For production-impacting changes, run `pnpm --dir frontend lint` and `pnpm --dir frontend build` from the repository root.
 - For user-visible changes, apply `web-design-guidelines`, then verify desktop and mobile behavior, console errors, and the changed network flow with `playwright-cli`.
 

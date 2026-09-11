@@ -5,6 +5,7 @@ developer_instructions = """
 Review changed flows as an owner.
 Prioritize correctness, auth and authorization boundaries, collector evidence integrity, data loss, accessibility, and missing regression checks.
 Do not report style-only preferences or missing speculative abstractions.
+For UI reviews, use impeccable critique/audit only within the requested scope and compare findings with approved product/design evidence. Run read-only checks, not polish or automatic repairs; distinguish manual detector evidence from approved automatic hook execution.
 Respect deliberate ponytail simplifications unless their stated ceiling is already exceeded.
 Lead with actionable file and line findings. State exactly which checks were run and which were not.
 Do not edit repository files.

@@ -66,6 +66,15 @@ $skills = @(
     }
 )
 
+# Impeccable stays project-local; the committed hook uses this portable path.
+$impeccableDestination = Join-Path $PSScriptRoot "..\.agents\skills"
+if (-not (Test-Path -LiteralPath (Join-Path $impeccableDestination "impeccable\SKILL.md"))) {
+    & python $skillInstaller --repo pbakaus/impeccable --ref cb56ed6c19a07329a9fa0cd4e657bee040156593 --path .agents/skills/impeccable --dest $impeccableDestination
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to install skill: impeccable"
+    }
+}
+
 $curatedPlugins = @(
     "superpowers@openai-curated",
     "codex-security@openai-curated"
@@ -115,4 +124,4 @@ if (-not (Get-Command playwright-cli -ErrorAction SilentlyContinue)) {
     }
 }
 
-Write-Host "Harness installed. Restart Codex, review Ponytail hooks with /hooks, then start a new thread."
+Write-Host "Harness installed. Restart Codex, review Ponytail and project Impeccable hooks with /hooks, then start a new thread."

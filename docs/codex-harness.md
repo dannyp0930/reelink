@@ -24,13 +24,14 @@ backend/AGENTS.md                 NestJS·Prisma 작업 규칙
 
 ## Plugin과 Skill 점검
 
-2026-09-02 기준 필요한 핵심 도구는 설치되어 있다. 추가 plugin 설치는 필요 없다.
+기본 구성은 2026-09-02에 설치했다. 2026-09-11에는 프로젝트 로컬 `impeccable` 스킬과 hook 설정을 추가했다. hook 자동 실행은 Codex에서 사용자 승인이 필요하다.
 
 - `caveman`: Codex 답변을 짧게 유지한다. 기술 용어와 핵심 근거는 줄이지 않는다.
 - `ponytail`: 코드를 작성하거나 검토할 때 가장 작은 올바른 구현을 택한다.
 - `superpowers`: 복잡한 작업의 기획, 체계적 디버깅, TDD 절차를 맡는다.
 - `vercel-react-best-practices`: React와 Next.js 변경에서 성능 저하를 막는다.
 - `web-design-guidelines`: 사용자 화면을 마감할 때 접근성, UX, 성능 규칙을 점검한다.
+- `impeccable`: 화면 설계·디자인 비평·품질 검사를 맡는다. 기존 기능 검증을 대체하지 않는다.
 - `playwright-cli`: 바뀐 화면을 데스크톱과 모바일에서 직접 검증한다.
 - `codex-security`: 인증, 권한, 비밀, 결제, 업로드, 외부 입력처럼 신뢰 경계를 건드린 diff를 검사한다.
 - `humanize-korean`: 한글 문서를 마무리할 때 의미를 바꾸지 않고 문체만 다듬는다.
@@ -71,3 +72,22 @@ Get-ChildItem $HOME\.codex\skills\react-best-practices,$HOME\.codex\skills\web-d
 ## 업데이트
 
 upstream을 갱신할 때는 새 commit의 manifest, skill 지침, hook을 먼저 검토한다. 검토가 끝난 commit SHA로 설치 스크립트의 `Ref`를 바꾼 뒤 다시 실행한다. 특히 `ponytail` hook의 네트워크 호출·임의 shell 실행·저장소 파일 변경 여부와 `web-design-guidelines`가 실행 중 가져오는 최신 규칙의 변경 내용을 확인한다.
+
+## Impeccable setup (2026-09-11)
+
+- Source: `pbakaus/impeccable`, commit `cb56ed6c19a07329a9fa0cd4e657bee040156593`; skill `4.3.1`, engine `0.1.5`.
+- The skill lives in gitignored `.agents/skills/impeccable/`. The Windows harness installer restores it when missing; it does not overwrite an existing installation.
+- `.codex/hooks.json` is shared and supports Windows and POSIX launchers. A missing skill is a no-op. The first launcher run downloads the pinned engine and verifies its SHA-256 sidecar before execution.
+- After installing, reload Codex if `$impeccable` is not available. Open `/hooks`, inspect and approve the project hook on each PC. `hooks status` reporting `enabled` is a configuration default, not evidence that Codex approved or dispatched it.
+- For UI design, invoke the launcher from `frontend` as cwd. Product/design context is not initialized by installation; Repov benchmarking and the list/calendar brief come first.
+
+On macOS, from the repository root (Python 3 and Codex's Skill Installer required):
+
+```bash
+python3 "$HOME/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py" --repo pbakaus/impeccable --ref cb56ed6c19a07329a9fa0cd4e657bee040156593 --path .agents/skills/impeccable --dest .agents/skills
+sh .agents/skills/impeccable/scripts/impeccable engine-probe
+```
+
+The macOS commands are setup instructions, not verified on this Windows PC. Do not overwrite an existing skill directory; inspect its version before updating.
+
+Verified on Windows: `engine-probe`, `hooks status`, `detect frontend/app/viewing-workspace.tsx --json`, and a synthetic PostToolUse payload piped to the hook launcher. The detector returned `[]`; the manual hook confirmed the same target was scanned. This is an installation smoke test, not a full UX audit or proof of automatic hook dispatch. User approval remains pending. No automatic security scan tool was available; the launcher and hook commands were inspected manually.

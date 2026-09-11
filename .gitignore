@@ -105,6 +105,10 @@ logs/
 *.log
 _workspace/
 .playwright-cli/
+.agents/skills/impeccable/
+.impeccable/config.local.json
+.impeccable/cache/
+.impeccable/hook.cache.json
 
 # ==========================================
 # 🔹 Git / CI
