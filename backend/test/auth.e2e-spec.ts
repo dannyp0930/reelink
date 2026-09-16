@@ -336,12 +336,16 @@ describe('Authentication and ownership (local PostgreSQL)', () => {
       .get(`/viewings/${viewing.id}`)
       .set('Cookie', stranger.cookie)
       .expect(404);
-    const list = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .get('/viewings')
       .query({ userId: user.id })
       .set('Cookie', stranger.cookie)
+      .expect(400);
+    const list = await request(app.getHttpServer())
+      .get('/viewings')
+      .set('Cookie', stranger.cookie)
       .expect(200);
-    expect(list.body).toEqual([]);
+    expect(list.body).toMatchObject({ items: [], totalItems: 0 });
     await prisma.user.update({
       where: { googleSubject: `${prefix}-stranger` },
       data: { role: 'ADMIN' },

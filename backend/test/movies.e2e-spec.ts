@@ -25,6 +25,8 @@ describe('TMDB movie selection (local PostgreSQL)', () => {
     title: marker,
     original_title: 'Original title',
     release_date: '2024-02-29',
+    runtime: 132,
+    poster_path: '/fixture.jpg',
     overview: 'not forwarded',
   });
   const json = (body: unknown, status = 200) =>
@@ -125,7 +127,7 @@ describe('TMDB movie selection (local PostgreSQL)', () => {
           title: marker,
           originalTitle: 'Original title',
           releaseDate: '2024-02-29',
-          posterUrl: null,
+          posterUrl: 'https://image.tmdb.org/t/p/w154/fixture.jpg',
         },
       ],
     });
@@ -181,6 +183,7 @@ describe('TMDB movie selection (local PostgreSQL)', () => {
     ['/../poster.jpg', null],
     ['/poster.svg', null],
     ['/poster.jpg?token=secret', null],
+    ['/poster.jpg\n', null],
     [123, null],
   ])(
     'returns a fixed-host thumbnail or null (case %#)',
@@ -256,6 +259,8 @@ describe('TMDB movie selection (local PostgreSQL)', () => {
       title: marker,
       originalTitle: 'Original title',
       releaseDate: '2024-02-29T00:00:00.000Z',
+      runtimeMinutes: 132,
+      posterUrl: 'https://image.tmdb.org/t/p/w154/fixture.jpg',
     });
     expect(
       await prisma.movieExternalId.findUnique({
@@ -301,6 +306,91 @@ describe('TMDB movie selection (local PostgreSQL)', () => {
     expect(await prisma.movie.count({ where: { title: marker } })).toBe(
       before + 1,
     );
+  });
+
+  it('enriches missing fields on reselection without replacing saved metadata', async () => {
+    const link = await prisma.movieExternalId.findUniqueOrThrow({
+      where: {
+        source_externalId: { source: 'TMDB', externalId: String(tmdbId) },
+      },
+    });
+    const before = await prisma.movie.update({
+      where: { id: link.movieId },
+      data: { runtimeMinutes: null, posterPath: null },
+    });
+    fetchMock.mockResolvedValueOnce(
+      json({
+        ...movie(),
+        title: 'must not replace',
+        release_date: '2026-01-01',
+      }),
+    );
+    const result = await select().expect(200);
+    expect(result.body).toMatchObject({
+      id: before.id,
+      title: before.title,
+      releaseDate: before.releaseDate!.toISOString(),
+      runtimeMinutes: 132,
+      posterUrl: 'https://image.tmdb.org/t/p/w154/fixture.jpg',
+    });
+    expect(result.body).not.toHaveProperty('posterPath');
+    expect(result.body).not.toHaveProperty('createdAt');
+    await select().expect(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([null, 0, -1, 1.5, '132', 2147483648])(
+    'treats optional invalid metadata as unknown (%s)',
+    async (runtime) => {
+      const existing = await prisma.movieExternalId.findUniqueOrThrow({
+        where: {
+          source_externalId: { source: 'TMDB', externalId: String(tmdbId) },
+        },
+      });
+      await prisma.movie.update({
+        where: { id: existing.movieId },
+        data: { runtimeMinutes: null, posterPath: null },
+      });
+      fetchMock.mockResolvedValueOnce(
+        json({ ...movie(), runtime, poster_path: '//evil.example/a.jpg' }),
+      );
+      expect((await select().expect(200)).body).toMatchObject({
+        runtimeMinutes: null,
+        posterUrl: null,
+      });
+    },
+  );
+
+  it('keeps existing movies usable when enrichment times out or credentials are absent', async () => {
+    fetchMock.mockRejectedValueOnce(
+      new DOMException('timeout', 'TimeoutError'),
+    );
+    expect((await select().expect(200)).body).toMatchObject({
+      title: marker,
+      runtimeMinutes: null,
+    });
+    delete process.env.TMDB_READ_ACCESS_TOKEN;
+    await select().expect(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not overwrite metadata filled during an enrichment request', async () => {
+    const existing = await prisma.movieExternalId.findUniqueOrThrow({
+      where: {
+        source_externalId: { source: 'TMDB', externalId: String(tmdbId) },
+      },
+    });
+    fetchMock.mockImplementationOnce(async () => {
+      await prisma.movie.update({
+        where: { id: existing.movieId },
+        data: { runtimeMinutes: 99, posterPath: '/winner.png' },
+      });
+      return json(movie());
+    });
+    expect((await select().expect(200)).body).toMatchObject({
+      runtimeMinutes: 99,
+      posterUrl: 'https://image.tmdb.org/t/p/w154/winner.png',
+    });
   });
 
   it('reports missing server credentials without making a request', async () => {

@@ -4,20 +4,23 @@ PC를 옮겨 작업할 때 이 문서부터 확인한다. 큰 작업을 마치�
 
 ## 현재 상태
 
-- 기준일: 2026-09-11
+- 기준일: 2026-09-16
 - 브랜치: `main`
-- 단계: A·C1 완료. 관람 시각·극장/OTT/기타 저장 계약 구현, 다음은 C2 TMDB 메타데이터·극장 검색. Repov 시각 설계는 D 전에 완료
+- 단계: A·B·C1·C2·C3·D 완료. 다음은 E 캘린더. 실제 계정 통합 검증은 F에 남음
 - Frontend: Next.js `16.3.4`, React `19.2.8`
 - Backend: NestJS `12.0.1`, TypeScript `6.0.3`
-- Database: 로컬 PostgreSQL 17 (검증 버전 `17.11`), Prisma `7.10.0`, 도메인·인증 migration 2개 적용 완료
+- Database: 로컬 PostgreSQL 17 (검증 버전 `17.11`), Prisma `7.10.0`, 개발·테스트 DB migration 4개 적용 완료
 - Auth: Google OIDC, DB 세션, 전역 인증·권한 검사 구현. 이 PC의 키 설정과 로컬 실제 로그인 사용자 확인 완료
-- 제품 UI: 로그인·로그아웃, 영화 검색·선택·관람 작성·최근 기록 목록 연결. 상세·수정·삭제 화면은 미구현
-- 관람 API: 관람 연월일·선택 시각, 극장·OTT·기타 유형과 조건부 상세 저장 구현. Frontend 조건부 입력과 TMDB 러닝타임 보강은 아직 미구현
-- 관람 API: 본인 CRUD 구현. 평점 필터는 다음 작업
-- 영화 API: TMDB 검색·선택 구현. 계약과 설정은 `docs/movies-api.md`에 기록
+- 제품 UI: `/viewings` 목록·평점 필터·정렬·페이지, `/viewings/new` 작성, `/viewings/:id` 상세·삭제, `/viewings/:id/edit` 수정 연결
+- 관람 API: 관람 연월일·선택 시각, 극장·OTT·기타 유형과 조건부 상세 저장 구현. Frontend도 날짜·시각·극장·OTT·기타 조건부 입력 연결
+- 관람 API: 본인 CRUD, 정확한 평점·미평가 필터, 정렬·페이지·월별 조회 구현. 계약은 `docs/viewings-api.md`에 기록. 목록 필터·페이지 연결 완료. 캘린더는 E에서 연결
+- 영화 API: TMDB 검색·선택, 개봉일·러닝타임·포스터 누락값 보강 구현. 선택·최근 기록 화면에 표시. 계약과 설정은 `docs/movies-api.md`에 기록
 - 모델 운영: 전 단계 Astra `high`. 구현 → 테스트 → 검토 → 현황 기록 순서
 
 ## 완료
+
+- 2026-09-16: Reelink DB의 호스트 포트를 `5433`으로 변경했다. 컨테이너 내부는 `5432`이며 `reelink_postgres_data` 볼륨을 그대로 사용한다. 다른 서비스의 `5432`는 변경하지 않았다. 로컬 `backend/.env`의 개발·테스트 URL과 `.env.example`, README, 인증 설정 안내를 맞췄다. `db:status`에서 migration 4개 적용 상태를 확인했다.
+- 2026-09-15~16: Repov 공식 화면을 확인하고 실제 앱에서 목록·작성·상세·수정을 분리했다. 작성은 영화 선택 뒤 관람 정보를 입력한다. 400ms 검색 debounce·한글 조합·반점 별 입력을 재사용하고 극장은 단일 combobox로 합쳤다. 날짜·선택 시각·OTT·기타 입력과 탭 단위 임시저장도 연결했다. 저장·폐기·로그아웃·계정 변경 시 초안을 정리하며 기존 0점과 유형 미지정 상영관 값을 보존한다.
 
 - 2026-09-11: 관람 작성 전체 UI 테스트를 복구하고 평점 select를 0.5점 단위 별 선택으로 변경했다. 데스크톱·모바일 응답 대체 테스트를 통과했다. 실제 계정 통합 검증과 화면 분리는 후속 단계다.
 - 2026-09-11: Impeccable 스킬 `4.3.1`·엔진 `0.1.5` 설치, 공통·Frontend·역할별 규칙과 재설치 안내를 추가했다. 엔진·수동 detector·hook 시험은 통과했다. Codex 자동 hook은 `/hooks` 사용자 승인 대기이며 디자인 감사 완료와 구분한다. 설치 근거와 명령은 `docs/codex-harness.md`에 기록했다.
@@ -65,15 +68,10 @@ PC를 옮겨 작업할 때 이 문서부터 확인한다. 큰 작업을 마치�
 
 2026-09-11 승인한 구조와 단계별 완료 기준은 [내 기록 UI 구현 계획](viewing-ui-plan.md)을 따른다. 제품 맥락은 `frontend/PRODUCT.md`에 기록했다. 색상·타이포 등 시각 디자인은 아직 미확정이다.
 
-1. A 완료: `scripts/check-viewing-ui.cjs`와 검색·포스터 회귀 테스트를 통과했다. 별점 선택도 포함하며 실제 계정 통합 검증은 F에서 진행한다.
-2. B: 관람 유형별 기능 구조는 계획에 반영했다. Repov 실제 화면 비교·시각 설계는 남아 있으며 D 전에 완료한다.
-3. C1 완료 → 다음 C2 → C3: TMDB 개봉연도·러닝타임·포스터 및 내부 극장 검색 → 평점 필터·정렬·페이지·월별 조회 순서다. 최근 50건만으로 달력을 만들지 않는다.
-4. D → E: 유형별 작성·상세·수정·리스트 route와 삭제를 연결하고 캘린더·공통 평점 필터·뒤로가기 복원을 완성한다. 극장·OTT·기타·유형 미지정 모두 같은 기록으로 조회한다. Infinite scroll은 상태 복원과 페이지 계약을 정리한 뒤 검토한다.
-5. F: 통합 UI 검증, 실제 계정 흐름, TMDB 출처·로고를 확인한다. 이후 극장 데이터 관리 → 수동 굿즈 등록·제보·승인 → 개인 배포로 진행한다. 자동 수집·알림은 보류한다.
-
-평점은 관람 회차별로 표시한다. 영화별 대표 평점 정책은 이번 작업의 선행 조건이 아니며 영화별 모아보기를 추가할 때 별도로 정한다.
-
-극장 입력은 자체 `Cinema` DB 검색을 우선 추천한다. 자주 사용하는 극장부터 관리하고 전국 데이터 선적재는 하지 않는다. 지도 API는 없는 장소를 찾는 후속 보조 수단으로 검토하며 저장·재배포 조건을 먼저 확인한다. 아직 승인·구현한 검색 기능이나 데이터 적재 작업은 아니다.
+1. E: 월별 캘린더, 날짜 선택, 같은 날의 모든 기록, 날짜가 채워진 작성 화면을 연결한다. 월의 모든 페이지를 조회하며 실패한 일부 페이지를 빈 달력으로 표시하지 않는다.
+2. 리스트·캘린더의 평점 필터와 상세 복귀 상태를 공유한다. 목록의 필터·페이지·스크롤 복원은 D에서 구현했다.
+3. F: 실제 계정의 생성·수정·삭제, Google 재로그인 뒤 초안 복원, 모바일 실제 기기 확인을 진행한다. 자동 테스트는 개인 DB 대신 대체 API를 쓴다.
+4. 극장 초기 데이터 등록은 `docs/cinemas-api.md`를 따른다. 전국 선적재·지도 API·포스터 일괄 보강은 하지 않는다.
 
 ## 남은 제약
 
@@ -82,12 +80,43 @@ PC를 옮겨 작업할 때 이 문서부터 확인한다. 큰 작업을 마치�
 - URL 형식·관리자 승인·만료 및 상충 판정 API는 후속 구현 대상이다.
 - `security-diff-scan` 도구가 없어 자동 보안 스캔은 실행하지 못했다. 이번 작업에서 외부 서비스나 운영 DB는 변경하지 않았다.
 - 관리자 제품 화면, 계정 삭제·익명화 API, 배포 환경 요청 제한은 미구현이다. 첫 가입자를 자동 관리자로 승격하지 않는다.
-- `GET /cinemas`는 로그인한 사용자에게 이름순 극장 목록을 반환한다. 과거 관람을 위해 폐업·휴업도 포함하고 `id`, `name`, `chain`, `status`만 제공한다. 극장 데이터 등록은 아직 별도 작업이다.
-- 관람 평점 필터·페이지 이동, 다중 창 수정 충돌 감지는 미구현이다. 현재 관람 목록은 최근 50건이며 정상 수정은 마지막 쓰기가 반영된다.
+- `GET /cinemas?q=...`는 이름 검색·최대 50건을 지원한다. 과거 관람을 위해 폐업·휴업도 포함하고 `id`, `name`, `chain`, `status`, `address`를 제공한다. 실제 극장 데이터 등록은 남아 있다.
+- 관람 평점 필터·정렬·페이지 조작 화면은 구현했다. 월별 캘린더는 남아 있다. 다중 창 수정 충돌 감지는 없으며 정상 수정은 마지막 쓰기가 반영된다. 페이지 요청 사이의 데이터 변경을 고정하는 스냅샷도 제공하지 않는다.
 - TMDB 메타데이터 자동 갱신·캐시·앱 자체 요청 제한은 미구현이다. 영화 선택·관람 작성은 별도 요청이다. TMDB 출처 문구·링크는 표시하지만 공식 로고 적용은 남아 있다.
 - 다른 PC에서 Git과 migration으로 코드·스키마는 재현되지만 로컬 DB의 관람 데이터는 자동 동기화되지 않는다. 실제 데이터 이동은 별도 백업·복원 작업이다.
 
 ## 마지막 검증
+
+2026-09-16 B·D 화면 분리 및 DB 포트 변경:
+
+- 최종 `pnpm --dir frontend lint`, `pnpm --dir frontend build`, `pnpm --dir backend test:db` 통과. DB 도메인 테스트 30개다. `check-viewing-ui.cjs`, `check-movie-metadata.cjs`는 각각 데스크톱·모바일 모두 통과했고 예상하지 않은 콘솔 오류는 없었다. `git diff --check` 통과.
+
+- `docker compose up -d --wait db`, `pnpm --dir backend db:status` 통과. 기존 볼륨과 migration 4개를 유지했고 DB는 `127.0.0.1:5433`으로 연결된다. Frontend `3002`, Backend `3001`, `/api/auth/session`의 `200` 응답을 확인했다.
+- `scripts/check-viewing-ui.cjs`를 새 route용으로 교체했다. 1280×844·390×844에서 생성·수정·삭제, 평점/필터/페이지/스크롤 복원, 유형 전환, 기존 0점·상영관 보존, 초안의 내부 이동·브라우저 뒤로가기·새로고침·계정 분리·만료 대응을 확인한다. 개인 기록을 쓰거나 삭제하지 않는 대체 API 테스트다.
+- `scripts/check-movie-metadata.cjs`를 새 화면과 단일 극장 combobox에 맞춰 갱신했다. 두 화면 크기에서 포스터·메타데이터 누락, 극장 검색 지연·빈 결과·실패·재시도, 선택 보존과 저장을 통과했다.
+- 별도 검토는 전용 Impeccable 역할 대신 일반 검토 에이전트로 수행했다. 극장 결과를 키보드로 이동할 때 활성 항목이 보이도록 수정했다. 검색 목록 닫힘으로 저장 버튼 위치가 바뀌던 문제도 결과 목록을 겹쳐 띄워 해결했다. 검토자가 해당 수정과 화면을 확인한 판정은 `ship`이다. 전체 기능의 독립 재검증을 뜻하지 않는다.
+- Impeccable detector는 2026-09-15에 수동 실행했다. 기본 폰트 경고 1건은 기존 Operate 스타일로 유지하며 자동 hook 실행으로 기록하지 않는다. Web Interface Guidelines의 입력 이름·자동완성·포커스·다크 모드·복귀 상태를 점검했다. 디자인 문서는 현재 구현의 참고 기록이며 최종 브랜드 확정이 아니다.
+- 한국어 문서는 Humanize 빠른 수동 검토를 거쳤다. 설치본의 지표 준비 스크립트가 없어 정량 점수는 계산하지 않았다. `security-diff-scan`은 도구가 없어 미실행이다.
+- 검색 debounce·한글 조합·포스터 회귀 테스트는 2026-09-15에 통과했다. 아래 C2·C3의 Backend 전체 테스트는 당시 결과이며 이번 DB 포트 변경의 재실행 결과와 구분한다. 커밋·푸시는 하지 않았다.
+
+2026-09-15 C3 기록 조회:
+
+- `GET /viewings`에 `month`, `rating`, `sort`, `page`, `limit`을 추가했다. 0점·미평가를 구분하고 평점순은 미평가를 마지막에 둔다. 날짜·시각 오름차순은 시각 미입력을 마지막에 둔다. 기본 50건·최대 100건이며 응답은 `{ items, page, limit, totalItems, totalPages }`다.
+- 초기 조회·새로고침과 UI 대체 응답을 새 계약에 맞췄다. 소유자 조건은 건수·목록 모두 세션에서 결정하며 지원하지 않는 `userId` query도 거부한다. 같은 응답의 건수와 항목은 `RepeatableRead`로 읽는다. 새 의존성·migration은 없다.
+- 구현 전 새 계약의 실패를 확인했다. 수정 후 `pnpm --dir backend test:e2e viewings` 117개, `pnpm --dir backend test:e2e` 전체 224개, `pnpm --dir backend test -- --runInBand` 30개와 Backend·Frontend lint/build를 통과했다. 월 55건의 페이지 누락·중복, 0~5점 전체 반점·미평가, 타인·관리자 격리, 잘못된 query, 윤년·연말·지원 연도 양끝, 자정·시각 미입력을 검증했다.
+- `scripts/check-movie-metadata.cjs`, `scripts/check-viewing-ui.cjs`, `scripts/check-search-debounce.cjs`, `scripts/check-search-posters.cjs`가 1280×844·390×844에서 통과했다. API·이미지 응답 대체 검증이며 개인 DB에는 테스트 기록을 만들지 않았다. 예상한 실패 외 콘솔·런타임 오류가 없었고 검증 브라우저를 종료했다.
+- 변경한 응답 소비 부분에 React 지침과 web-design-guidelines를 적용했다. 레이아웃·스타일 변경은 없으며 Impeccable 디자인 감사는 실행하지 않았다. Codex Security 실행 도구가 없어 자동 스캔은 미실행이다. query 허용 목록·입력 제한·소유자 조건·Prisma 조회를 직접 검토했다.
+- Frontend `http://localhost:3002`, Backend `http://localhost:3001`, 3002 세션 API의 `200`과 DB healthy를 확인했다. Backend 빌드 후 `APP_ORIGIN=http://localhost:3002`로 재시작했다. `git diff --check` 통과. 기존 C2 변경과 이번 C3 변경은 미커밋 상태다.
+
+2026-09-14 C2 영화 메타데이터·극장 검색:
+
+- `Movie.runtimeMinutes`, `posterPath`와 DB 제약을 추가했다. 기존 영화 재선택은 누락값만 보강하고 TMDB 장애 시 기존 영화로 기록을 계속한다. 영화·관람 응답은 서버가 조합한 포스터 주소와 필요한 필드만 반환한다.
+- 극장 이름 검색은 주소·휴폐업 상태를 포함하며 최대 50건을 반환한다. 기존 작성 UI에 400ms 검색과 선택 유지, 영화 메타데이터 표시를 연결했다. 시각·유형별 입력과 route는 아직 구현하지 않았다.
+- `pnpm --dir backend test:e2e movies viewings movie-metadata-migration` 134개, Backend 단위 테스트 30개, Backend lint/build, Frontend lint/build 통과. 새 migration은 테스트 DB 검증 후 실제 개발 DB에도 적용했다.
+- Playwright의 `scripts/check-movie-metadata.cjs`, `scripts/check-viewing-ui.cjs`, `scripts/check-search-debounce.cjs`, `scripts/check-search-posters.cjs`가 1280×844·390×844에서 통과했다. 이미지·API 응답을 대체했으며 예상한 실패 외에 콘솔·런타임 오류가 없었다. 테스트가 개인 관람 기록을 만들지는 않았다.
+- 변경 UI의 web-design-guidelines 검토와 Impeccable 수동 detector `[]` 확인. 기존 화면 스타일을 유지했고 새로운 시각 디자인을 확정하지 않았다. 자동 hook·자동 보안 스캔 실행을 의미하지 않으며 `security-diff-scan` 도구는 사용할 수 없었다.
+- 실제 TMDB 상세 서비스에서 `496243`의 개봉일 `2019-05-30`, 러닝타임 `131`, 포스터 경로를 확인했다. 개발 DB에는 영화를 쓰지 않았다. 극장 수는 0건이며 초기 등록 방법을 `docs/cinemas-api.md`에 남겼다.
+- Frontend 3002·Backend 3001·세션 API `200`을 확인했고 검증 브라우저는 종료했다. `git diff --check` 통과. 3000은 다른 작업용으로 유지한다. 아래 2026-09-11의 개발 DB 미적용·서버 중단 기록은 당시 상태다.
 
 2026-09-11 C1 관람 맥락 저장:
 
@@ -188,7 +217,7 @@ git diff --check
 
 ## 재개 방법
 
-현재 PC는 다른 작업이 3000을 사용하므로 Frontend를 3002로 실행한다. Backend는 3001이며 실행 환경의 `APP_ORIGIN=http://localhost:3002`를 사용한다. Google 승인된 콜백에도 3002 주소를 추가했다. 아래 `pnpm dev`는 기본 3000 실행이므로 현재 PC에서는 포트별 명령을 사용한다.
+현재 PC는 Frontend를 3002, DB를 5433으로 실행한다. Compose의 `REELINK_DB_PORT`를 바꾸면 `backend/.env`의 `DATABASE_URL`과 `TEST_DATABASE_URL`도 같은 호스트 포트로 맞춘다. Backend는 3001이며 실행 환경의 `APP_ORIGIN=http://localhost:3002`를 사용한다. Google 승인된 콜백에도 3002 주소를 추가했다. 아래 `pnpm dev`는 기본 3000 실행이므로 현재 PC에서는 포트별 명령을 사용한다.
 
 ```powershell
 # Frontend 터미널

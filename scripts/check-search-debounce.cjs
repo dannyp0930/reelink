@@ -13,7 +13,8 @@
     const url = route.request().url();
     const path = url.slice(origin.length).split('?')[0];
     if (path === '/api/auth/session') return route.fulfill({json:{user:{id:'fixture',email:'viewer@example.test',role:'USER'},googleAvailable:true}});
-    if (path === '/api/viewings' || path === '/api/cinemas') return route.fulfill({json:[]});
+    if (path === '/api/viewings') return route.fulfill({json:{items:[],page:1,limit:50,totalItems:0,totalPages:0}});
+    if (path === '/api/cinemas') return route.fulfill({json:[]});
     if (path === '/api/movies/search') {
       const q = decodeURIComponent(url.match(/[?&]q=([^&]*)/)[1]);
       requests.push(q);
@@ -28,7 +29,7 @@
     for (const width of [1280,390]) {
       await page.setViewportSize({width,height:844});
       await page.emulateMedia({colorScheme:width === 390 ? 'dark' : 'light'});
-      await page.goto(origin);
+      await page.goto(origin + '/viewings/new');
       const input = page.getByLabel('영화 제목');
       await input.waitFor();
       assert(await page.getByRole('button',{name:'영화 검색',exact:true}).count() === 0, 'Redundant search button still visible');

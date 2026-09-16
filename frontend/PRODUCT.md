@@ -27,8 +27,8 @@ On 2026-09-11 the user approved the list/calendar wireframe and requested a docu
 - Ratings: the API supports 0 through 5 in 0.5 steps; unrated is null, not zero. The entry UI shows only stars (0.5 through 5), with no numeric caption, zero button, or unrated button. Clicking the selected half-star again or pressing Delete clears to unrated. Storage still supports integer half-star units 0 through 10; existing zero ratings are preserved.
 - List and calendar share rating filters, record details, editing, and deletion. Calendar selection shows all records for that day; adding from a date prefills the viewing date. These are approved target behaviors, not claims of completed implementation.
 - The entry flow is movie search, selection, viewing information, save, then detail. Return navigation preserves the prior view and position. Drafts must not be silently lost on failures or navigation.
-- Current implementation has Google authentication, TMDB search/selection, viewing CRUD APIs, and a single-page entry UI with half-star input. Mocked desktop/mobile entry tests pass; real-account integration, routes, saved-record posters, query pagination, filters, and calendar remain unfinished.
-- Viewing time/type, streaming/other details, runtime enrichment, and cinema search are planned, not implemented. Next implementation proposal: C1 data contract and migration; complete Repov visual evidence before D screen implementation. See the UI plan for C1/C2/C3 sequencing and legacy-data rules.
+- Current implementation includes Google authentication, TMDB search/selection, viewing CRUD APIs, and separate list/new/detail/edit routes. The list has rating/sort/page controls. Entry supports date, optional local time, half-star ratings and conditional theater/OTT/other details. Calendar and real-account integration remain later work.
+- C1-C3 APIs and D routes are implemented; desktop/mobile fixture checks passed on 2026-09-16. B uses actual official Repov screenshots inspected on 2026-09-15. Real-account integration remains F. Cinema registration is in docs/cinemas-api.md; query contracts are in docs/viewings-api.md. Calendar must fetch every month page and show incomplete/error state on partial failure.
 - Next.js App Router and NestJS/Prisma remain in place. Browser requests use same-origin /api; Backend enforces session ownership. Never expose server credentials.
 - Goods automation and notifications are deferred. No social feeds, maps, recommendations, or image-upload feature in the record UI scope.
 
@@ -39,8 +39,8 @@ Keep the name Reelink. Repov is the user's UI benchmark. Preserve concise Korean
 ## Evidence on Hand
 
 - Existing code, domain schema, and test history are recorded in docs/project-status.md and docs/movies-api.md.
-- Repov's official introduction confirms multiple record views. Reference images failed to load during initial research; exact visual benchmarking is still pending.
-- Confirmed colors, typography, spacing, and a production design system do not exist yet. Do not invent approval for them.
+- Repov official screenshots inspected on 2026-09-15: movie search, compact timeline poster rows, month calendar covers and detail. Source: https://page.repov.me/. Marketing backgrounds are not the app palette.
+- The implemented neutral light/dark tokens and components are documented in DESIGN.md as a provisional snapshot, not an approved final brand identity.
 
 ## Product Principles
 
@@ -51,4 +51,4 @@ Keep the name Reelink. Repov is the user's UI benchmark. Preserve concise Korean
 
 ## Open Decisions
 
-Initial/default view persistence, query/pagination contracts, draft retention details, and final visual styling remain implementation proposals in the UI plan. No image-first/code-first standing workflow preference has been selected. Do not choose one during documentation work.
+Initial view is list; persistence of the last chosen view and final brand styling remain open. Drafts use user/record-scoped tab sessionStorage plus in-memory fallback; save/discard/logout/account switch clear them. The user chose direct app implementation for this screen task, not a permanent global image/code workflow policy. Query/pagination contracts are in docs/viewings-api.md.

@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-16T00:00:00+09:00",
+  "title": "Design System: Reelink",
+  "extensions": {
+    "colorMeta": {
+      "background-light": { "role": "neutral", "displayName": "Light background" },
+      "foreground-light": { "role": "neutral", "displayName": "Light foreground" },
+      "background-dark": { "role": "neutral", "displayName": "Dark background" },
+      "foreground-dark": { "role": "neutral", "displayName": "Dark foreground" }
+    },
+    "breakpoints": [{ "name": "sm", "value": "40rem" }]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Shared button with the foreground-filled save/action variant.",
+      "html": "<button class=\"ds-primary\" type=\"button\">관람 기록 저장</button>",
+      "css": ".ds-primary{min-height:3rem;border:1px solid color-mix(in oklab,var(--foreground,#171717) 30%,transparent);border-radius:.75rem;background:var(--foreground,#171717);color:var(--background,#fff);padding:.5rem 1rem;font-family:Arial,Helvetica,sans-serif;font-size:.875rem;line-height:1.25rem;font-weight:600;touch-action:manipulation}.ds-primary:hover{opacity:.85}.ds-primary:focus-visible{outline:2px solid;outline-offset:4px}.ds-primary:disabled{opacity:.5}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Outlined retry, movie change, and other secondary actions.",
+      "html": "<button class=\"ds-secondary\" type=\"button\">영화 변경</button>",
+      "css": ".ds-secondary{min-height:3rem;border:1px solid color-mix(in oklab,var(--foreground,#171717) 30%,transparent);border-radius:.75rem;background:transparent;color:var(--foreground,#171717);padding:.5rem 1rem;font-family:Arial,Helvetica,sans-serif;font-size:.875rem;line-height:1.25rem;font-weight:600;touch-action:manipulation}.ds-secondary:hover{background:color-mix(in oklab,var(--foreground,#171717) 10%,transparent)}.ds-secondary:focus-visible{outline:2px solid;outline-offset:4px}.ds-secondary:disabled{opacity:.5}"
+    },
+    {
+      "name": "Text field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Visible label and the shared native input treatment.",
+      "html": "<label class=\"ds-label\">상영관<input class=\"ds-field\" value=\"1관\" /></label>",
+      "css": ".ds-label{display:block;color:var(--foreground,#171717);font-family:Arial,Helvetica,sans-serif;font-size:.875rem;line-height:1.25rem;font-weight:500}.ds-field{display:block;margin-top:.5rem;min-height:3rem;width:100%;min-width:0;border:1px solid color-mix(in oklab,var(--foreground,#171717) 30%,transparent);border-radius:.75rem;background:var(--background,#fff);color:var(--foreground,#171717);padding:.5rem .75rem;font-family:Arial,Helvetica,sans-serif;font-size:1rem;line-height:1.5rem}.ds-field:focus-visible{outline:2px solid;outline-offset:2px}"
+    },
+    {
+      "name": "Pagination",
+      "kind": "nav",
+      "refersTo": "pagination",
+      "description": "Page count between the existing outlined navigation controls.",
+      "html": "<nav class=\"ds-pages\" aria-label=\"기록 페이지\"><a class=\"ds-page-link\" href=\"#previous\">이전</a><span>2 / 3</span><a class=\"ds-page-link\" href=\"#next\">다음</a></nav>",
+      "css": ".ds-pages{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-top:1.5rem;color:var(--foreground,#171717);font-family:Arial,Helvetica,sans-serif;font-size:.875rem;line-height:1.25rem;font-variant-numeric:tabular-nums}.ds-page-link{min-height:3rem;border:1px solid color-mix(in oklab,var(--foreground,#171717) 30%,transparent);border-radius:.75rem;padding:.5rem 1rem;color:inherit;text-decoration:none;font-weight:600;touch-action:manipulation}.ds-page-link:hover{background:color-mix(in oklab,var(--foreground,#171717) 10%,transparent)}.ds-page-link:focus-visible{outline:2px solid;outline-offset:4px}"
+    },
+    {
+      "name": "Record row",
+      "kind": "custom",
+      "refersTo": "record-row",
+      "description": "Linked poster row, using the actual missing-poster state and illustrative content.",
+      "html": "<a class=\"ds-record\" href=\"#record\"><span class=\"ds-poster\">포스터 없음</span><span class=\"ds-copy\"><span class=\"ds-date\">2026. 9. 16.</span><span class=\"ds-title\">영화 제목</span><span class=\"ds-meta\">미평가</span></span></a>",
+      "css": ".ds-record{display:flex;min-width:0;gap:1rem;padding:1.25rem 0;color:var(--foreground,#171717);font-family:Arial,Helvetica,sans-serif;text-decoration:none}.ds-record:hover{background:color-mix(in oklab,var(--foreground,#171717) 5%,transparent)}.ds-record:focus-visible{outline:2px solid}.ds-poster{display:flex;flex-shrink:0;align-items:center;justify-content:center;width:60px;height:90px;overflow:hidden;border-radius:.375rem;background:color-mix(in oklab,var(--foreground,#171717) 10%,transparent);font-size:.75rem;line-height:1.25rem;text-align:center}.ds-copy{min-width:0;flex:1}.ds-date{display:block;color:color-mix(in oklab,var(--foreground,#171717) 70%,transparent);font-size:.75rem;line-height:1rem;font-variant-numeric:tabular-nums}.ds-title{display:block;margin-top:.25rem;font-size:1.125rem;line-height:1.75rem;font-weight:600;overflow-wrap:break-word}.ds-meta{display:block;margin-top:.25rem;font-size:.875rem;line-height:1.25rem}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Reelink movie diary",
+    "overview": "This is a source-based implementation snapshot, not approval of a final brand identity. It records the neutral light/dark interface retained during the approved direct app build. The factual North Star names the product; it introduces no new visual metaphor.\n\nRepov informed record hierarchy. Surface composition and the later calendar belong in [.impeccable/surfaces/app-viewings.md](.impeccable/surfaces/app-viewings.md). Sources are `app/globals.css` and `app/viewings/{shared,shell,record-list,record-form}.tsx`. This documenter pass inspected code; browser evidence belongs to the parent review in `.impeccable/review/`.",
+    "keyCharacteristics": [
+      "Neutral surfaces with foreground-filled primary actions.",
+      "Native fields, visible focus, and compact record metadata.",
+      "Movie posters within a single-column record hierarchy."
+    ],
+    "rules": [],
+    "dos": [
+      "Do reuse the existing theme variables and shared control treatments when extending these record screens.",
+      "Do preserve visible labels, keyboard focus, native field behavior, and poster fallback states."
+    ],
+    "donts": [
+      "Don't treat this implementation snapshot as approval of a final brand redesign.",
+      "Don't infer calendar, chip, card, shadow, or motion systems that the sampled code does not implement."
+    ]
+  }
+}

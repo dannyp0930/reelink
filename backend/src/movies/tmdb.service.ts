@@ -7,6 +7,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { posterPath, posterUrl } from './movie-response';
 
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -125,14 +126,7 @@ export class TmdbService {
       totalPages: Math.min(data.total_pages as number, 500),
       results: data.results.map((value: unknown) => {
         const movie = movieSummary(value);
-        const path = record(value).poster_path;
-        // Optional artwork must not break search or introduce arbitrary image hosts.
-        const posterUrl =
-          typeof path === 'string' &&
-          /^\/[a-zA-Z0-9_-]{1,200}\.(jpg|png)$/.test(path)
-            ? `https://image.tmdb.org/t/p/w154${path}`
-            : null;
-        return { ...movie, posterUrl };
+        return { ...movie, posterUrl: posterUrl(record(value).poster_path) };
       }),
     };
   }
@@ -140,9 +134,19 @@ export class TmdbService {
   async details(id: number) {
     const url = new URL(`https://api.themoviedb.org/3/movie/${id}`);
     url.searchParams.set('language', 'ko-KR');
-    const movie = movieSummary(await this.request(url, true));
+    const data = record(await this.request(url, true));
+    const movie = movieSummary(data);
     if (movie.tmdbId !== id)
       throw new BadGatewayException('TMDB movie id mismatch');
-    return movie;
+    return {
+      ...movie,
+      runtimeMinutes:
+        Number.isSafeInteger(data.runtime) &&
+        (data.runtime as number) > 0 &&
+        (data.runtime as number) <= 2_147_483_647
+          ? (data.runtime as number)
+          : null,
+      posterPath: posterPath(data.poster_path),
+    };
   }
 }

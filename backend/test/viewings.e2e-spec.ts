@@ -77,7 +77,9 @@ describe('Viewing writes (local PostgreSQL)', () => {
         await prisma.movie.deleteMany({
           where: { id: { in: [movieId, otherMovieId] } },
         });
-        await prisma.cinema.deleteMany({ where: { id: cinemaId } });
+        await prisma.cinema.deleteMany({
+          where: { OR: [{ id: cinemaId }, { name: { startsWith: cinemaId } }] },
+        });
       }
     } finally {
       await app?.close();
@@ -136,7 +138,7 @@ describe('Viewing writes (local PostgreSQL)', () => {
         .get('/viewings')
         .set('Cookie', `${config.sessionCookie}=${ownerToken}`)
         .expect(200);
-      expect(list.body).toContainEqual(
+      expect((list.body as { items: unknown[] }).items).toContainEqual(
         expect.objectContaining({ id, ...context }),
       );
     },
@@ -234,7 +236,63 @@ describe('Viewing writes (local PostgreSQL)', () => {
       name: cinemaId,
       chain: 'INDEPENDENT',
       status: 'CLOSED',
+      address: null,
     });
+  });
+
+  it('searches cinema names literally, bounds results and returns historical location metadata', async () => {
+    await prisma.cinema.createMany({
+      data: Array.from({ length: 55 }, (_, i) => ({
+        name: `${cinemaId} CGV ${String(i).padStart(2, '0')}${i === 54 ? '%_\\' : ''}`,
+        chain: 'CGV' as const,
+        address: '서울 테스트 주소',
+        status: 'TEMPORARILY_CLOSED' as const,
+      })),
+    });
+    const get = (q: unknown) =>
+      request(app.getHttpServer())
+        .get('/cinemas')
+        .set('Cookie', `${config.sessionCookie}=${ownerToken}`)
+        .query({ q });
+    const result = await get(`  ${cinemaId} cgv  `).expect(200);
+    const cinemas = result.body as Array<{ name: string }>;
+    expect(result.body).toHaveLength(50);
+    expect(cinemas[0]).toMatchObject({
+      name: `${cinemaId} CGV 00`,
+      address: '서울 테스트 주소',
+      status: 'TEMPORARILY_CLOSED',
+    });
+    expect(cinemas[49].name).toBe(`${cinemaId} CGV 49`);
+    expect((await get(`${cinemaId} CGV 54%_\\`).expect(200)).body).toHaveLength(
+      1,
+    );
+    expect((await get(`missing-${cinemaId}`).expect(200)).body).toEqual([]);
+    for (const q of [['one', 'two'], 'x'.repeat(101), 'bad\0query'])
+      await get(q).expect(400);
+    const created = await write('post')
+      .send({ ...input(), cinemaId })
+      .expect(201);
+    const record = created.body as {
+      id: string;
+      cinema: unknown;
+      movie: unknown;
+    };
+    expect(record.cinema).toMatchObject({
+      id: cinemaId,
+      status: 'CLOSED',
+      address: null,
+    });
+    expect(record.movie).toMatchObject({
+      id: movieId,
+      runtimeMinutes: null,
+      posterUrl: null,
+    });
+    const detail = await request(app.getHttpServer())
+      .get(`/viewings/${record.id}`)
+      .set('Cookie', `${config.sessionCookie}=${ownerToken}`)
+      .expect(200);
+    expect(detail.body).toMatchObject({ cinema: record.cinema });
+    expect(detail.body).not.toHaveProperty('movie.createdAt');
   });
 
   async function fixture() {
@@ -283,7 +341,7 @@ describe('Viewing writes (local PostgreSQL)', () => {
       .get('/viewings')
       .set('Cookie', `${config.sessionCookie}=${ownerToken}`)
       .expect(200);
-    expect(list.body).toEqual(
+    expect((list.body as { items: unknown[] }).items).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: body.id })]),
     );
   });
@@ -506,6 +564,225 @@ describe('Viewing writes (local PostgreSQL)', () => {
       .send({ rating: 0 })
       .expect(400);
     await write('delete', '/viewings/not-a-uuid').expect(400);
+  });
+
+  describe('query contract', () => {
+    const get = (query = '', token = ownerToken) =>
+      request(app.getHttpServer())
+        .get(`/viewings${query ? `?${query}` : ''}`)
+        .set('Cookie', `${config.sessionCookie}=${token}`);
+    type Page = {
+      items: {
+        id: string;
+        watchedOn: string;
+        watchedTime: string | null;
+        ratingHalfStars: number | null;
+      }[];
+      page: number;
+      limit: number;
+      totalItems: number;
+      totalPages: number;
+    };
+    const seed = (
+      watchedOn: string,
+      ratingHalfStars: number | null = null,
+      watchedTime: string | null = null,
+      userId = ownerId,
+    ) =>
+      prisma.movieViewing.create({
+        data: {
+          userId,
+          movieId,
+          watchedOn: new Date(`${watchedOn}T00:00:00.000Z`),
+          ratingHalfStars,
+          watchedTime,
+        },
+      });
+
+    beforeEach(async () => {
+      await prisma.movieViewing.deleteMany({
+        where: { userId: { in: [ownerId, strangerId] } },
+      });
+    });
+
+    it('returns bounded pages with stable ties, accurate totals and no other owners', async () => {
+      await prisma.movieViewing.createMany({
+        data: Array.from({ length: 55 }, () => ({
+          id: randomUUID(),
+          userId: ownerId,
+          movieId,
+          watchedOn: new Date('2024-02-29T00:00:00Z'),
+        })),
+      });
+      await seed('2024-02-29', 10, null, strangerId);
+      const first = (await get('month=2024-02').expect(200)).body as Page;
+      const second = (await get('month=2024-02&page=2').expect(200))
+        .body as Page;
+      expect(first).toMatchObject({
+        page: 1,
+        limit: 50,
+        totalItems: 55,
+        totalPages: 2,
+      });
+      expect(first.items).toHaveLength(50);
+      expect(second.items).toHaveLength(5);
+      const ids = [...first.items, ...second.items].map((row) => row.id);
+      expect(new Set(ids).size).toBe(55);
+      expect(ids).toEqual([...ids].sort().reverse());
+      expect((await get('page=3').expect(200)).body).toMatchObject({
+        items: [],
+        page: 3,
+        totalItems: 55,
+        totalPages: 2,
+      });
+      expect((await get('month=2024-03').expect(200)).body).toMatchObject({
+        items: [],
+        totalItems: 0,
+        totalPages: 0,
+      });
+      const admin = (
+        await get('month=2024-02&sort=rating&limit=1', strangerToken).expect(
+          200,
+        )
+      ).body as Page;
+      expect(admin.totalItems).toBe(1);
+      expect(admin.items[0].ratingHalfStars).toBe(10);
+      await request(app.getHttpServer())
+        .get('/viewings?month=2024-02')
+        .expect(401);
+    });
+
+    it('filters every half-star exactly and keeps zero separate from unrated', async () => {
+      for (let rating = 0; rating <= 10; rating++)
+        await seed('2024-02-29', rating);
+      await seed('2024-02-29');
+      await seed('2024-03-01', 9);
+      for (let rating = 0; rating <= 10; rating++) {
+        const page = (
+          await get(`month=2024-02&rating=${rating / 2}`).expect(200)
+        ).body as Page;
+        expect(page.totalItems).toBe(1);
+        expect(page.items[0].ratingHalfStars).toBe(rating);
+      }
+      expect(
+        (await get('month=2024-02&rating=unrated').expect(200)).body,
+      ).toMatchObject({
+        totalItems: 1,
+        items: [expect.objectContaining({ ratingHalfStars: null })],
+      });
+      expect(
+        (await get('month=2024-02&rating=all').expect(200)).body,
+      ).toMatchObject({ totalItems: 12 });
+    });
+
+    it('sorts ratings descending, ties by date/id, and unrated last', async () => {
+      const unrated = await seed('2026-01-01');
+      const zero = await seed('2025-01-01', 0);
+      const older = await seed('2024-02-28', 9);
+      const a = await seed('2024-02-29', 9);
+      const b = await seed('2024-02-29', 9);
+      const best = await seed('2020-01-01', 10);
+      const page = (await get('sort=rating').expect(200)).body as Page;
+      expect(page.items.map((row) => row.id)).toEqual([
+        best.id,
+        ...[a.id, b.id].sort().reverse(),
+        older.id,
+        zero.id,
+        unrated.id,
+      ]);
+      const newest = (await get('sort=newest&limit=1').expect(200))
+        .body as Page;
+      expect(newest.items[0].id).toBe(unrated.id);
+    });
+
+    it.each(['2024-02', '2025-02', '2025-12', '0001-01', '9999-12'])(
+      'uses calendar month boundaries for %s without timezone conversion',
+      async (month) => {
+        const start = new Date(`${month}-01T00:00:00.000Z`);
+        const end = new Date(start);
+        end.setUTCMonth(end.getUTCMonth() + 1);
+        const lastDay = new Date(end.getTime() - 86400000);
+        const dates = [
+          new Date(start.getTime() - 86400000),
+          start,
+          lastDay,
+          end,
+        ].filter(
+          (date) => date.getUTCFullYear() >= 1 && date.getUTCFullYear() <= 9999,
+        );
+        await prisma.movieViewing.createMany({
+          data: dates.map((watchedOn) => ({
+            userId: ownerId,
+            movieId,
+            watchedOn,
+          })),
+        });
+        const page = (await get(`month=${month}&sort=oldest`).expect(200))
+          .body as Page;
+        expect(page.totalItems).toBe(2);
+        expect(page.items.map((row) => row.watchedOn)).toEqual([
+          start.toISOString(),
+          lastDay.toISOString(),
+        ]);
+      },
+    );
+
+    it('orders calendar records by date, known time and id, preserving midnight', async () => {
+      const unknown = await seed('2024-02-29');
+      const evening = await seed('2024-02-29', 8, '19:30');
+      const midnight = await seed('2024-02-29', 8, '00:00');
+      const another = await seed('2024-02-29', 9, '19:30');
+      const previous = await seed('2024-02-28');
+      const next = await seed('2024-03-01', 9, '00:00');
+      const page = (await get('sort=oldest').expect(200)).body as Page;
+      expect(page.items.map((row) => row.id)).toEqual([
+        previous.id,
+        midnight.id,
+        ...[evening.id, another.id].sort(),
+        unknown.id,
+        next.id,
+      ]);
+    });
+
+    it.each([
+      'rating=',
+      'rating=5.5',
+      'rating=-0.5',
+      'rating=4.25',
+      'rating=NaN',
+      'rating=null',
+      'rating=1e0',
+      'rating=0x1',
+      'rating=4%0A',
+      'rating=4&rating=5',
+      'rating[x]=4',
+      'sort=',
+      'sort=unknown',
+      'sort=rating&sort=newest',
+      'month=',
+      'month=2024-2',
+      'month=0000-01',
+      'month=2024-00',
+      'month=2024-13',
+      'month=2024-02-01',
+      'month=2024-02%0A',
+      'month=2024-01&month=2024-02',
+      'page=0',
+      'page=-1',
+      'page=1.5',
+      'page=',
+      'page=1e2',
+      'page=1000001',
+      'page=999999999999999999999999',
+      'page=1&page=2',
+      'limit=0',
+      'limit=101',
+      'limit=1.5',
+      'limit=',
+      'userId=someone',
+    ])('rejects malformed or unsupported query %s', async (query) => {
+      await get(query).expect(400);
+    });
   });
 
   it.each(['movieId', 'cinemaId'])(

@@ -20,7 +20,8 @@
     if (path === '/api/auth/session') return route.fulfill({json:{user:{id:'fixture',email:'viewer@example.test',role:'USER'},googleAvailable:true}});
     if (path === '/api/movies/search') return route.fulfill({json:{page:1,totalPages:1,results:items}});
     if (path.startsWith('/api/movies/tmdb/')) return route.fulfill({json:{id:'fixture-movie',title:'기생충'}});
-    if (path === '/api/viewings' || path === '/api/cinemas') return route.fulfill({json:[]});
+    if (path === '/api/viewings') return route.fulfill({json:{items:[],page:1,limit:50,totalItems:0,totalPages:0}});
+    if (path === '/api/cinemas') return route.fulfill({json:[]});
     return route.abort();
   });
   const results = [];
@@ -28,7 +29,7 @@
     for (const width of [1280, 390]) {
       await page.setViewportSize({width,height:844});
       await page.emulateMedia({colorScheme: width === 390 ? 'dark' : 'light', reducedMotion:'reduce'});
-      await page.goto(origin);
+      await page.goto(origin + '/viewings/new');
       await page.getByLabel('영화 제목').fill('기생충');
       await page.getByLabel('영화 제목').press('Enter');
       const list = page.getByRole('region', {name:'영화 검색 결과'});
@@ -58,7 +59,7 @@
       results.push({width, passed:true});
     }
     await page.getByRole('button', {name:'기생충 선택'}).click();
-    await page.getByText('선택한 영화: 기생충', {exact:true}).waitFor();
+    await page.getByText('2. 관람 기록', {exact:true}).waitFor();
     await page.getByLabel('관람 날짜').fill('2024-02-29');
     assert(errors.length === 0, errors.join('; '));
     return {results, errors};

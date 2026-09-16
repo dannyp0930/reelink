@@ -30,7 +30,7 @@ GOOGLE_CLIENT_SECRET=
 - 세션은 7일 뒤 만료된다. 브라우저에는 HttpOnly·SameSite=Lax 쿠키를 두고 DB에는 SHA-256 해시만 저장한다. 다시 로그인하면 해당 브라우저의 기존 세션을 교체한다.
 - HTTPS에서는 Secure·`__Host-` 쿠키를 사용한다. production에서는 HTTPS `APP_ORIGIN`이 필수다.
 - 공개로 지정하지 않은 API는 로그인이 필요하다. 변경 요청은 `Origin`이 `APP_ORIGIN`과 일치해야 한다. 개인 응답은 `Cache-Control: no-store`로 반환한다.
-- `/api/viewings`는 본인 기록 최근 50건, `/api/viewings/:id`는 본인 기록 한 건을 반환한다. 작성·수정·삭제도 구현했으며 타인 기록 변경은 관리자에게도 `404`다. 입력 규칙은 `docs/domain-fields.md`에 있다. 평점 필터와 입력 화면은 다음 작업이다.
+- `/api/viewings`는 본인 기록을 평점·월·정렬·페이지 조건으로 조회하고 `/api/viewings/:id`는 본인 기록 한 건을 반환한다. 목록은 `{ items, page, limit, totalItems, totalPages }`이며 기본 50건·최대 100건이다. 조회 계약은 `docs/viewings-api.md`, 쓰기 입력은 `docs/domain-fields.md`를 따른다. 타인 기록의 상세·수정·삭제는 관리자에게도 `404`다.
 - 관리자 역할은 DB에서 명시적으로 부여한다. 첫 가입자를 자동 관리자로 만들지 않는다. 실제 관리자 제품 화면은 후속 작업이다.
 - 계정 삭제 시 세션과 개인 관람 기록은 함께 삭제된다. 굿즈 제보가 연결된 계정은 현재 DB 정책상 삭제가 거부된다. 자동 삭제·익명화 기능은 아직 없으며 별도 정책 확정 후 구현한다.
 
@@ -45,13 +45,13 @@ docker compose exec -T db createdb -U reelink reelink_test
 `backend/.env`에 다음 값을 추가한다. 테스트는 이 주소를 사용하며 Auth 통합 테스트는 로컬 `reelink_test` 이외의 DB에서 실행을 거부한다.
 
 ```dotenv
-TEST_DATABASE_URL=postgresql://reelink:reelink@localhost:5432/reelink_test?schema=public
+TEST_DATABASE_URL=postgresql://reelink:reelink@localhost:5433/reelink_test?schema=public
 ```
 
 별도 PowerShell 터미널에서 테스트 DB에 migration을 적용한다. 아래 환경 변수는 해당 터미널에만 적용되므로 검증 후 터미널을 닫는다.
 
 ```powershell
-$env:DATABASE_URL='postgresql://reelink:reelink@localhost:5432/reelink_test?schema=public'
+$env:DATABASE_URL='postgresql://reelink:reelink@localhost:5433/reelink_test?schema=public'
 pnpm --dir backend db:deploy
 pnpm --dir backend test:e2e
 ```

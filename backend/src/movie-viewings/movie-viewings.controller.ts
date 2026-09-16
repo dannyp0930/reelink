@@ -11,12 +11,28 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
 } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../auth/auth.metadata';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseViewingInput, resolveViewingContext } from './viewing-input';
+import { movieResponse, movieSelect } from '../movies/movie-response';
+import { parseViewingQuery } from './viewing-query';
+
+const viewingInclude = {
+  movie: { select: movieSelect },
+  cinema: {
+    select: { id: true, name: true, chain: true, status: true, address: true },
+  },
+} satisfies Prisma.MovieViewingInclude;
+
+function viewingResponse(
+  viewing: Prisma.MovieViewingGetPayload<{ include: typeof viewingInclude }>,
+) {
+  return { ...viewing, movie: movieResponse(viewing.movie) };
+}
 
 @Controller('viewings')
 export class MovieViewingsController {
@@ -26,10 +42,12 @@ export class MovieViewingsController {
   async create(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
     const data = resolveViewingContext(parseViewingInput(body, 'create'));
     try {
-      return await this.prisma.movieViewing.create({
-        data: { ...data, userId: request.user!.id },
-        include: { movie: true },
-      });
+      return viewingResponse(
+        await this.prisma.movieViewing.create({
+          data: { ...data, userId: request.user!.id },
+          include: viewingInclude,
+        }),
+      );
     } catch (error) {
       this.rethrowWriteError(error);
     }
@@ -43,22 +61,24 @@ export class MovieViewingsController {
   ) {
     const data = parseViewingInput(body, 'patch');
     try {
-      return await this.prisma.$transaction(
-        async (tx) => {
-          const where = { id, userId: request.user!.id };
-          const current = await tx.movieViewing.findFirst({
-            where,
-            select: { viewingType: true },
-          });
-          if (!current) throw new NotFoundException();
-          // The type used to validate a partial patch must not race a type change.
-          return tx.movieViewing.update({
-            where,
-            data: resolveViewingContext(data, current.viewingType),
-            include: { movie: true },
-          });
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      return viewingResponse(
+        await this.prisma.$transaction(
+          async (tx) => {
+            const where = { id, userId: request.user!.id };
+            const current = await tx.movieViewing.findFirst({
+              where,
+              select: { viewingType: true },
+            });
+            if (!current) throw new NotFoundException();
+            // The type used to validate a partial patch must not race a type change.
+            return tx.movieViewing.update({
+              where,
+              data: resolveViewingContext(data, current.viewingType),
+              include: viewingInclude,
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        ),
       );
     } catch (error) {
       this.rethrowWriteError(error);
@@ -93,13 +113,33 @@ export class MovieViewingsController {
   }
 
   @Get()
-  list(@Req() request: AuthenticatedRequest) {
-    return this.prisma.movieViewing.findMany({
-      where: { userId: request.user!.id },
-      orderBy: [{ watchedOn: 'desc' }, { id: 'desc' }],
-      take: 50,
-      include: { movie: true },
-    });
+  async list(
+    @Query() query: Record<string, unknown>,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const { where: filters, orderBy, page, limit } = parseViewingQuery(query);
+    const where = { ...filters, userId: request.user!.id };
+    // Count and rows must describe the same snapshot within this response.
+    const [totalItems, rows] = await this.prisma.$transaction(
+      [
+        this.prisma.movieViewing.count({ where }),
+        this.prisma.movieViewing.findMany({
+          where,
+          orderBy,
+          skip: (page - 1) * limit,
+          take: limit,
+          include: viewingInclude,
+        }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return {
+      items: rows.map(viewingResponse),
+      page,
+      limit,
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+    };
   }
 
   @Get(':id')
@@ -109,9 +149,9 @@ export class MovieViewingsController {
   ) {
     const viewing = await this.prisma.movieViewing.findFirst({
       where: { id, userId: request.user!.id },
-      include: { movie: true },
+      include: viewingInclude,
     });
     if (!viewing) throw new NotFoundException();
-    return viewing;
+    return viewingResponse(viewing);
   }
 }

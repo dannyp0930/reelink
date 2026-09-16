@@ -102,7 +102,7 @@ Backend 환경 변수 예시는 [`backend/.env.example`](backend/.env.example)�
 
 Google OAuth 설정과 별도 테스트 DB 준비는 [로그인 설정 가이드](docs/auth-setup.md)를 따른다. 자격 증명이 없으면 앱은 실행되지만 로그인 버튼은 비활성화된다.
 
-Compose의 계정은 로컬 개발 전용이며 DB 포트는 `127.0.0.1:5432`에만 노출한다. 운영 환경에는 이 계정을 사용하지 않는다. DB는 named volume에 남는다. 다른 PC에서는 코드를 받은 뒤 migration을 적용하며, 개인 관람 데이터는 Git으로 동기화되지 않는다.
+Compose의 계정은 로컬 개발 전용이며 DB 포트는 `127.0.0.1:5433`에만 노출한다. 운영 환경에는 이 계정을 사용하지 않는다. DB는 named volume에 남는다. 다른 PC에서는 코드를 받은 뒤 migration을 적용하며, 개인 관람 데이터는 Git으로 동기화되지 않는다.
 
 ## 주요 명령
 

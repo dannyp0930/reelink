@@ -111,15 +111,17 @@ model OAuthLogin {
 }
 
 model Movie {
-  id            String            @id @default(uuid()) @db.Uuid
-  title         String
-  originalTitle String?
-  releaseDate   DateTime?         @db.Date
-  externalIds   MovieExternalId[]
-  viewings      MovieViewing[]
-  campaigns     GoodsCampaign[]
-  createdAt     DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime          @updatedAt @db.Timestamptz(3)
+  id             String            @id @default(uuid()) @db.Uuid
+  title          String
+  originalTitle  String?
+  releaseDate    DateTime?         @db.Date
+  runtimeMinutes Int?
+  posterPath     String?           @db.VarChar(205)
+  externalIds    MovieExternalId[]
+  viewings       MovieViewing[]
+  campaigns      GoodsCampaign[]
+  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime          @updatedAt @db.Timestamptz(3)
 }
 
 model MovieExternalId {

@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  HttpException,
   Param,
   Post,
   Query,
@@ -11,6 +12,7 @@ import {
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TmdbService } from './tmdb.service';
+import { movieResponse } from './movie-response';
 
 function positiveInteger(
   value: unknown,
@@ -78,7 +80,41 @@ export class MoviesController {
       where,
       include: { movie: true },
     });
-    if (existing) return existing.movie;
+    if (existing) {
+      const current = existing.movie;
+      if (current.releaseDate && current.runtimeMinutes && current.posterPath)
+        return movieResponse(current);
+      let details: Awaited<ReturnType<TmdbService['details']>>;
+      try {
+        details = await this.tmdb.details(id);
+      } catch (error) {
+        // Optional enrichment must not prevent recording a known movie offline.
+        if (error instanceof HttpException) return movieResponse(current);
+        throw error;
+      }
+      const enriched = await this.prisma.$transaction(async (tx) => {
+        // Conditional writes preserve metadata filled by another selection meanwhile.
+        if (details.releaseDate)
+          await tx.movie.updateMany({
+            where: { id: current.id, releaseDate: null },
+            data: {
+              releaseDate: new Date(`${details.releaseDate}T00:00:00.000Z`),
+            },
+          });
+        if (details.runtimeMinutes)
+          await tx.movie.updateMany({
+            where: { id: current.id, runtimeMinutes: null },
+            data: { runtimeMinutes: details.runtimeMinutes },
+          });
+        if (details.posterPath)
+          await tx.movie.updateMany({
+            where: { id: current.id, posterPath: null },
+            data: { posterPath: details.posterPath },
+          });
+        return tx.movie.findUniqueOrThrow({ where: { id: current.id } });
+      });
+      return movieResponse(enriched);
+    }
 
     const movie = await this.tmdb.details(id);
     try {
@@ -91,6 +127,8 @@ export class MoviesController {
             create: {
               title: movie.title,
               originalTitle: movie.originalTitle,
+              runtimeMinutes: movie.runtimeMinutes,
+              posterPath: movie.posterPath,
               releaseDate: movie.releaseDate
                 ? new Date(`${movie.releaseDate}T00:00:00.000Z`)
                 : null,
@@ -99,7 +137,7 @@ export class MoviesController {
         },
         include: { movie: true },
       });
-      return link.movie;
+      return movieResponse(link.movie);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -109,7 +147,7 @@ export class MoviesController {
           where,
           include: { movie: true },
         });
-        if (winner) return winner.movie;
+        if (winner) return movieResponse(winner.movie);
       }
       throw error;
     }
